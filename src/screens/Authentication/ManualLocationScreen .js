@@ -82,7 +82,6 @@ const handleSubmit = async () => {
     };
 
     const response = await axiosInstance.post(`/location/save`, formData);
-    console.log("response", response);
 
     if (response.status === 200) {
       Alert.alert("Success", "Location saved successfully.");

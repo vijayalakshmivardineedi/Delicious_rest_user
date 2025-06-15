@@ -84,8 +84,6 @@ const RegistrationScreen = ({ navigation }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store userId in AsyncStorage
-        console.log("data", data);
        await AsyncStorage.setItem("userId", JSON.stringify(data.userId));
 await AsyncStorage.setItem("token", JSON.stringify(data.token));
 

@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import { baseURL } from "../../axios/healpers";
 import axiosInstance from "../../axios/healpers";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const OtpScreen = ({ route, navigation }) => {
   const { confirmation, phoneNumber } = route.params;
@@ -35,29 +36,25 @@ const OtpScreen = ({ route, navigation }) => {
   try {
     const response = await axiosInstance.post(`${baseURL}/login`, formData);
 
-    const data = await response.json();
+    const data = await response?.data;
 
-    if (!response.ok) {
-      // OTP invalid or user not found
-      if (data.message === "User not found, please register first") {
-        setShowBottomSheet(true); // show create account modal
+    if (response.status === 200) {
+            await AsyncStorage.setItem("userId", JSON.stringify(data.userId));
+await AsyncStorage.setItem("token", JSON.stringify(data.token));
+   navigation.replace("AppTabs"); 
+    } else {
+
+         if (data.message === "User not found, please register first") {
+        setShowBottomSheet(true);
       } else {
         Alert.alert("OTP Error", data.message || "Verification failed");
       }
-    } else {
-      // Login successful
-      navigation.replace("AppTabs", {
-        userId: data.userId,
-        token: data.token,
-      });
     }
   } catch (err) {
     console.error("Login Error:", err);
     Alert.alert("Network Error", "Please try again later.");
   }
 };
-
-
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -86,6 +83,9 @@ const OtpScreen = ({ route, navigation }) => {
   const handleCreateAccount = () => {
     setShowBottomSheet(false);
     navigation.replace("RegistrationScreen", { phoneNumber });
+  };
+  const handleResendOtp = () => {
+    navigation.replace("Onboard");
   };
 
   return (
@@ -120,18 +120,16 @@ const OtpScreen = ({ route, navigation }) => {
         <Text style={styles.continueText}>Continue</Text>
       </TouchableOpacity>
 
-      <Text style={styles.resendText}>
-        Didn't receive it?{" "}
-        <Text
-          onPress={() => {
-            setTimer(30);
-            console.log("Resend OTP");
-          }}
-          style={styles.resendLink}
-        >
-          Retry
-        </Text>
-      </Text>
+     <Text style={styles.resendText}>
+  Didn't receive it?{" "}
+  <Text
+    onPress={handleResendOtp}
+    style={styles.resendLink}
+  >
+    Retry
+  </Text>
+</Text>
+
 
       {/* Bottom Sheet Modal */}
       <Modal

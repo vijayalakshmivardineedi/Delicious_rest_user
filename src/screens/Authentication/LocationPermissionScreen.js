@@ -15,11 +15,6 @@ import { Linking, Platform } from "react-native";
 const LocationPermissionScreen = ({ navigation, route }) => {
   const { userId: routeUserId, token: routeToken } = route.params || {};
 
-
-  console.log("routeUserId", routeUserId)
-  console.log("routeToken", routeToken)
-
-
   const handleLocationAccess = async () => {s
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -32,7 +27,6 @@ const LocationPermissionScreen = ({ navigation, route }) => {
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      console.log("Current Location:", location);
 
       // Optional: Reverse geocode to get address
       const [place] = await Location.reverseGeocodeAsync(location.coords);

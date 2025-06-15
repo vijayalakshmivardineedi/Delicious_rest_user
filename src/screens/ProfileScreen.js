@@ -10,8 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { baseURL } from "../axios/healpers";
+import axiosInstance, { baseURL } from "../axios/healpers";
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
@@ -20,15 +19,9 @@ const ProfileScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const phone = await AsyncStorage.getItem("phone");
-        const userData = await AsyncStorage.getItem("userData");
-        console.log("userData", userData);
-        if (!phone) {
-          Alert.alert("Error", "Phone number not found in storage.");
-          return;
-        }
+        const userId = await AsyncStorage.getItem("userId");
 
-        const res = await axios.get(`${baseURL}/me`);
+        const res = await axiosInstance.get(`${baseURL}/me`, userId);
         setUser(res.data);
       } catch (err) {
         console.error("Fetch Error:", err.message);
@@ -42,7 +35,7 @@ const ProfileScreen = ({ navigation }) => {
   }, []);
 
   const handleLogout = () => {
-    AsyncStorage.clear(); // clear all data
+    AsyncStorage.clear();
     Alert.alert("Logout", "You have been logged out!");
     navigation.replace("Onboard");
   };
@@ -57,7 +50,6 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Profile Section */}
       <View style={styles.profileHeader}>
         <Ionicons name="person-circle-outline" size={100} color="black" />
         <Text style={styles.name}>Hello, {user?.name || "User"}!</Text>

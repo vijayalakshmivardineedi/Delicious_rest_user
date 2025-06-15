@@ -7,12 +7,10 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { baseURL } from '../../axios/healpers';
+import axiosInstance, { baseURL } from '../../axios/healpers';
 
-const BASE_URL = `${baseURL}/location`;
 
 const SavedAddressScreen = () => {
   const [locationData, setLocationData] = useState(null);
@@ -21,24 +19,25 @@ const SavedAddressScreen = () => {
 
   useEffect(() => {
     const fetchAddress = async () => {
+      console.log("hohi")
       try {
         const userId = await AsyncStorage.getItem('userId');
-        const token = await AsyncStorage.getItem('token');
-
-        if (!userId || !token) {
+     
+        if (!userId) {
           Alert.alert('Session Expired', 'Please log in again.');
           navigation.replace('OtpScreen');
           return;
         }
-
-        const response = await axios.get(`${BASE_URL}/${userId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        setLocationData(response.data.location);
+        console.log("userId", userId)
+        const response = await axiosInstance.get(`/location/${userId}`);
+console.log("response", response)
+        if(response.status === 200){
+     setLocationData(response.data.location);
+        }
+console.log("response", response)
+   
       } catch (error) {
+        console.log("${baseURL}/location${userId}`", `/location/${userId}`);
         console.error('Fetch error:', error.message);
         Alert.alert('Error', 'Failed to fetch address');
       } finally {

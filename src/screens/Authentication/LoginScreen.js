@@ -31,7 +31,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.welcomeText}>Welcome to</Text>
+      <Text style={styles.welcomeText}>Welcome too</Text>
       <Text style={styles.welcomeText1}>Delicious Biryani's</Text>
       <Text style={styles.loginPrompt}>Login with your phone number</Text>
 
