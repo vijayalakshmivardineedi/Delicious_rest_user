@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Restaurant App",
+    "slug": "restaurant-app",
+    "version": "1.0.0",
+    "splash": {
+      "image": "./src/assets/splash1.png",
+      "backgroundColor": "#000000",
+      "resizeMode": "cover"
+    },
+    "android": {
+      "newArchEnabled": true,
+      "package": "com.anonymous.restaurantapp"
+    },
+    "ios": {
+      "newArchEnabled": true
+    }
+  }
+}
