@@ -17,36 +17,37 @@ const SavedAddressScreen = () => {
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
-  useEffect(() => {
-    const fetchAddress = async () => {
-      console.log("hohi")
-      try {
-        const userId = await AsyncStorage.getItem('userId');
-     
-        if (!userId) {
-          Alert.alert('Session Expired', 'Please log in again.');
-          navigation.replace('OtpScreen');
-          return;
-        }
-        console.log("userId", userId)
-        const response = await axiosInstance.get(`/location/${userId}`);
-console.log("response", response)
-        if(response.status === 200){
-     setLocationData(response.data.location);
-        }
-console.log("response", response)
-   
-      } catch (error) {
-        console.log("${baseURL}/location${userId}`", `/location/${userId}`);
-        console.error('Fetch error:', error.message);
-        Alert.alert('Error', 'Failed to fetch address');
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchAddress = async () => {
 
-    fetchAddress();
-  }, []);
+    try {
+            const raw = await AsyncStorage.getItem("userId");
+const userIdString = JSON.parse(raw); 
+const userId = parseInt(userIdString, 10);
+      if (!userIdString) {
+        Alert.alert('Session Expired', 'Please log in again.');
+        navigation.replace('Onboard');
+        return;
+      }
+
+      const response = await axiosInstance.get(`/location/${userId}`); 
+
+      if (response.status === 200) {
+        setLocationData(response.data.location);
+      }
+    } catch (error) {
+      console.log(`Error URL: /location/${userId}`);
+      console.error('Fetch error:', error.message);
+      Alert.alert('Error', 'Failed to fetch address');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAddress();
+}, []);
+
+
 
   if (loading) {
     return (
@@ -67,22 +68,32 @@ console.log("response", response)
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Saved Address</Text>
-      <View style={styles.card}>
-        <Text style={styles.label}>User ID:</Text>
-        <Text style={styles.value}>{locationData.userId}</Text>
+    <View style={styles.card}>
+  <View style={styles.row}>
+    <Text style={styles.label}>User ID: </Text>
+    <Text style={styles.value}>{locationData.userId}</Text>
+  </View>
+  </View>
+ <View style={styles.card}>
+  {locationData?.address?.map((addr, index) => (
+    <View key={addr._id || index} style={styles.addressBlock}>
+      <Text style={styles.label}>Address {index + 1}</Text>
 
-        <Text style={styles.label}>Address Line 1:</Text>
-        <Text style={styles.value}>{locationData.address1}</Text>
+      <Text style={styles.label}>Address Line 1:</Text>
+      <Text style={styles.value}>{addr.address1}</Text>
 
-        <Text style={styles.label}>Address Line 2:</Text>
-        <Text style={styles.value}>{locationData.address2}</Text>
+      <Text style={styles.label}>Address Line 2:</Text>
+      <Text style={styles.value}>{addr.address2}</Text>
 
-        <Text style={styles.label}>City:</Text>
-        <Text style={styles.value}>{locationData.city}</Text>
+      <Text style={styles.label}>City:</Text>
+      <Text style={styles.value}>{addr.city}</Text>
 
-        <Text style={styles.label}>Postal Code:</Text>
-        <Text style={styles.value}>{locationData.postalCode}</Text>
-      </View>
+      <Text style={styles.label}>Postal Code:</Text>
+      <Text style={styles.value}>{addr.postalCode}</Text>
+    </View>
+  ))}
+</View>
+
     </ScrollView>
   );
 };
@@ -108,6 +119,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 10,
     elevation: 3,
+    margin:2,
   },
   label: {
     fontSize: 16,
