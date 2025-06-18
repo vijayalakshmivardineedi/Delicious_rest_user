@@ -23,9 +23,7 @@ const HomeScreen = ({ navigation }) => {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get(
-        `${baseURL}/menu/getMenu`
-      );
+      const res = await axios.get(`${baseURL}/menu/getMenu`);
       const enabledCategories = res.data.filter(
         (cat) => cat.isEnabled !== false
       );
@@ -64,9 +62,7 @@ const HomeScreen = ({ navigation }) => {
         >
           <View style={styles.bannerContainer}>
             <Image
-              source={{
-                uri: "https://cdn.dribbble.com/userupload/32848511/file/original-1dfd007285c80201ac71ee4d0070a0bf.jpg?resize=1024x768&vertical=center",
-              }}
+              source={require("../assets/BANNER1.png")} 
               style={styles.bannerImage}
             />
           </View>
@@ -160,8 +156,8 @@ const styles = StyleSheet.create({
   },
   bannerImage: {
     width: "90%",
-    height: 150,
-    borderRadius: 15,
+    height: 180,
+    borderRadius: 8,
   },
   filterContainer: {
     flexDirection: "row",
@@ -196,11 +192,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   categoryText: {
-  fontSize: 14,
-  marginTop: 5,
-  fontWeight: "600",
-  textAlign: "center",        // ✅ center text inside its container
-},
+    fontSize: 14,
+    marginTop: 5,
+    fontWeight: "600",
+    textAlign: "center", // ✅ center text inside its container
+  },
 
   itemsContainer: {
     flexDirection: "column",
@@ -208,7 +204,7 @@ const styles = StyleSheet.create({
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#FFEAC5",
     padding: 10,
     marginVertical: 5,
     borderRadius: 10,

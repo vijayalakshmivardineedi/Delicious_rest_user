@@ -52,9 +52,10 @@ const ProfileScreen = ({ navigation }) => {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.profileHeader}>
         <Ionicons name="person-circle-outline" size={100} color="black" />
+        <Text style={styles.userId}>User ID: {user?.userId || "N/A"}</Text>
         <Text style={styles.name}>Hello, {user?.name || "User"}!</Text>
         <Text style={styles.email}>{user?.email || "user@example.com"}</Text>
-        <Text style={styles.userId}>User ID: {user?.userId || "N/A"}</Text>
+        
       </View>
 
       {/* Menu Options */}
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   userId: {
-    fontSize: 14,
+    fontSize: 18,
     color: "#666",
     marginTop: 4,
   },

@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#e2e1cf",
+    backgroundColor: "#FFEAC5",
     borderRadius: 4,
     width: 100,
     justifyContent: "space-between",
