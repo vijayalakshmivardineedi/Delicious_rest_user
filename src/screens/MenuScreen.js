@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,25 +9,34 @@ import {
 } from "react-native";
 import Collapsible from "react-native-collapsible";
 import { useNavigation } from "@react-navigation/native";
-import axios from "axios";
-import { baseURL } from "../axios/healpers";
+import axiosInstance, { baseURL } from "../axios/healpers";
 
 const MenuScreen = () => {
   const [menuData, setMenuData] = useState([]);
+  const [cartItems, setCartItems] = useState({});
+
   const [activeSections, setActiveSections] = useState({});
-  const [cartItems, setCartItems] = useState([]);
   const navigation = useNavigation();
 
+  console.log("menuData", menuData)
+  console.log("cartItems", cartItems)
+
   useEffect(() => {
-    const fetchMenu = async () => {
-      try {
-        const res = await axios.get(`${baseURL}/menu/getMenu`);
-        setMenuData(res.data);
-      } catch (err) {
-        console.error("Error fetching menu:", err);
-      }
-    };
-    fetchMenu();
+     const fetchMenu = async () => {
+          try {
+            const res = await axiosInstance.get(`${baseURL}/menu/getMenu`);
+            console.log("res", res)
+            console.log("data", res?.data)
+            setMenuData(res.data);
+          } catch (err) {
+            console.error("Fetch Error:", err.message);
+            Alert.alert("Error", "Failed to fetch user details.");
+          } finally {
+            setLoading(false);
+          }
+        };
+
+          fetchMenu();
   }, []);
 
   const toggleSection = (category) => {
@@ -37,15 +46,98 @@ const MenuScreen = () => {
     }));
   };
 
-  const addToCart = (item) => {
-    setCartItems((prev) => [...prev, item]);
+const addToCart = (item) => {
+  setCartItems((prev) => {
+    const existingItem = prev[item._id];
+    const quantity = existingItem ? existingItem.quantity + 1 : 1;
+    return {
+      ...prev,
+      [item._id]: { ...item, quantity },
+    };
+
+  });
+};
+
+const removeFromCart = (itemId) => {
+  setCartItems((prev) => {
+    const existingItem = prev[itemId];
+    if (!existingItem) return prev;
+
+    const newQuantity = existingItem.quantity - 1;
+
+    if (newQuantity <= 0) {
+      const updated = { ...prev };
+      delete updated[itemId];
+      return updated;
+    }
+
+    return {
+      ...prev,
+      [itemId]: { ...existingItem, quantity: newQuantity },
+    };
+
+  });
+};
+
+const updateCart = async () => {
+  console.log("hitting");
+
+  const userId = await AsyncStorage.getItem("userId");
+  console.log("userId:", userId);
+
+  if (!userId) {
+    console.warn("No userId found in AsyncStorage");
+    return;
+  }
+
+  const formData = {
+    userId,
+    items: Object.values(cartItems),
   };
 
-  const getTotalPrice = () => {
-    return cartItems.reduce((total, item) => total + item.itemCost, 0);
-  };
+  try {
+    const response = await axiosInstance.post(`${baseURL}/cart/save`, formData);
+    console.log("Cart saved successfully:", response.data);
+  } catch (error) {
+    if (error.response) {
+      console.log("Server responded with error:", error.response.data);
+    } else if (error.request) {
+      console.log("Request made but no response:", error.request);
+    } else {
+      console.log("Axios config error:", error.message);
+    }
+  }
+};
 
-  const renderItem = (item, key) => (
+
+
+
+const updateTimeoutRef = useRef(null);
+
+useEffect(() => {
+  if (updateTimeoutRef.current) {
+    clearTimeout(updateTimeoutRef.current);
+  }
+
+  updateTimeoutRef.current = setTimeout(() => {
+    updateCart();
+  }, 500);
+
+  return () => clearTimeout(updateTimeoutRef.current);
+}, [cartItems]);
+
+
+const getTotalPrice = () => {
+  return Object.values(cartItems).reduce(
+    (total, item) => total + item.itemCost * item.quantity,
+    0
+  );
+};
+
+const renderItem = (item, key) => {
+  const quantity = cartItems[item._id]?.quantity || 0;
+
+  return (
     <View style={styles.itemContainer} key={key}>
       <Image
         source={{ uri: `${baseURL}/uploads/${item.image}` }}
@@ -70,15 +162,35 @@ const MenuScreen = () => {
         </View>
         <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
         <Text style={styles.itemDesc}>{item.description || ""}</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => addToCart(item)}
-        >
-          <Text style={styles.addButtonText}>ADD</Text>
-        </TouchableOpacity>
+
+        {quantity === 0 ? (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => addToCart(item)}
+          >
+            <Text style={styles.addButtonText}>ADD</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.quantityControls}>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={() => removeFromCart(item._id)}
+            >
+              <Text style={styles.addButtonText}>-</Text>
+            </TouchableOpacity>
+            <Text style={styles.quantityText}>{quantity}</Text>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={() => addToCart(item)}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
+};
 
   return (
     <View style={{ flex: 1 }}>
@@ -104,18 +216,20 @@ const MenuScreen = () => {
         ))}
       </ScrollView>
 
-      {cartItems.length > 0 && (
-        <TouchableOpacity
-          style={styles.cartBar}
-          onPress={() => navigation.navigate("Cart")}
-        >
-          <Text style={styles.cartText}>
-            {cartItems.length} {cartItems.length === 1 ? "item" : "items"} | ₹
-            {getTotalPrice()}
-          </Text>
-          <Text style={styles.viewCartText}>View Cart</Text>
-        </TouchableOpacity>
-      )}
+     {Object.keys(cartItems).length > 0 && (
+  <TouchableOpacity
+    style={styles.cartBar}
+    onPress={() => navigation.navigate("Cart")}
+  >
+    <Text style={styles.cartText}>
+      {Object.keys(cartItems).length}{" "}
+      {Object.keys(cartItems).length === 1 ? "item" : "items"} | ₹
+      {getTotalPrice()}
+    </Text>
+    <Text style={styles.viewCartText}>View Cart</Text>
+  </TouchableOpacity>
+)}
+
     </View>
   );
 };
@@ -236,6 +350,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#000",
   },
+  quantityControls: {
+  flexDirection: "row",
+  alignItems: "center",
+  marginTop: 8,
+},
+controlButton: {
+  borderWidth: 1,
+  borderColor: "#00b386",
+  borderRadius: 4,
+  paddingVertical: 2,
+  paddingHorizontal: 10,
+},
+quantityText: {
+  marginHorizontal: 10,
+  fontSize: 16,
+  fontWeight: "600",
+  color: "#000",
+},
+
 });
 
 export default MenuScreen;
