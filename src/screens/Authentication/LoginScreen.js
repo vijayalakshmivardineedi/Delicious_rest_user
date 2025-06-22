@@ -29,6 +29,9 @@ const LoginScreen = ({ navigation }) => {
     navigation.navigate("OTP Verification", { phoneNumber });
   };
 
+
+  
+
   return (
     <View style={styles.container}>
       <Text style={styles.welcomeText}>Welcome too</Text>

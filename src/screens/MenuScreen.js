@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,80 +6,125 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
-import Collapsible from "react-native-collapsible";
-import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axiosInstance, { baseURL } from "../axios/healpers";
+import { useFocusEffect } from "@react-navigation/native";
 
-const MenuScreen = () => {
+const MenuScreen = ({ navigation }) => {
   const [menuData, setMenuData] = useState([]);
+  const [filteredMenu, setFilteredMenu] = useState([]);
+  const [selectedType, setSelectedType] = useState("Veg");
   const [cartItems, setCartItems] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const [activeSections, setActiveSections] = useState({});
-  const navigation = useNavigation();
+  
+    const fetchMenu = async () => {
+      try {
+        const res = await axiosInstance.get(`/menu/getAllMenu`);
+        const allMenu = res?.data?.menu || [];
+        setMenuData(allMenu);
+      } catch (err) {
+        Alert.alert("Error", "No Menu Found");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  console.log("menuData", menuData)
-  console.log("cartItems", cartItems)
+    const convertCartToMap = (itemsArray) => {
+  const cartMap = {};
+  itemsArray.forEach((item) => {
+    cartMap[item.itemId] = { ...item }; // key = itemId
+  });
+  return cartMap;
+};
+
+
+
+     const myMenu = async () => {
+        try {
+          const raw = await AsyncStorage.getItem("userId");
+          const userId = parseInt(JSON.parse(raw), 10);
+          const response = await axiosInstance.get(`/cart/getCart/${userId}`);
+         
+            if (response.status === 200) {
+        const cartArray = response.data.items || [];
+        setCartItems(convertCartToMap(cartArray));
+      }
+          
+        } catch (error) {
+          console.error("Error fetching cart:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+useEffect(() => {
+  const updatedMenu = menuData.map(item => ({
+    ...item,
+    quantity: cartItems[item._id]?.quantity || 0,
+  }));
+  setFilteredMenu(updatedMenu.filter(i => i.itemType === selectedType));
+}, [cartItems, menuData, selectedType]);
+
+
+
+  useFocusEffect(
+  useCallback(() => {
+    fetchMenu();
+    myMenu();
+  }, [])
+);
+
 
   useEffect(() => {
-     const fetchMenu = async () => {
-          try {
-            const res = await axiosInstance.get(`${baseURL}/menu/getMenu`);
-            console.log("res", res)
-            console.log("data", res?.data)
-            setMenuData(res.data);
-          } catch (err) {
-            console.error("Fetch Error:", err.message);
-            Alert.alert("Error", "Failed to fetch user details.");
-          } finally {
-            setLoading(false);
-          }
-        };
-
-          fetchMenu();
-  }, []);
-
-  const toggleSection = (category) => {
-    setActiveSections((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
-  };
+    const filtered = menuData.filter(item => item.itemType === selectedType);
+    setFilteredMenu(filtered);
+  }, [menuData, selectedType]);
 
 const addToCart = (item) => {
+  console.log("itemtype", item)
   setCartItems((prev) => {
     const existingItem = prev[item._id];
     const quantity = existingItem ? existingItem.quantity + 1 : 1;
-    return {
+
+    const updatedCart = {
       ...prev,
       [item._id]: { ...item, quantity },
     };
 
+    updateCart(updatedCart);
+
+    return updatedCart;
   });
 };
+
 
 const removeFromCart = (itemId) => {
   setCartItems((prev) => {
     const existingItem = prev[itemId];
     if (!existingItem) return prev;
 
+    let updatedCart;
+
     const newQuantity = existingItem.quantity - 1;
-
     if (newQuantity <= 0) {
-      const updated = { ...prev };
-      delete updated[itemId];
-      return updated;
+      updatedCart = { ...prev };
+      delete updatedCart[itemId];
+    } else {
+      updatedCart = {
+        ...prev,
+        [itemId]: { ...existingItem, quantity: newQuantity },
+      };
     }
+    updateCart(updatedCart);
 
-    return {
-      ...prev,
-      [itemId]: { ...existingItem, quantity: newQuantity },
-    };
-
+    return updatedCart;
   });
 };
 
-const updateCart = async () => {
+const updateCart = async (cart) => {
   console.log("hitting");
 
   const userId = await AsyncStorage.getItem("userId");
@@ -90,14 +135,16 @@ const updateCart = async () => {
     return;
   }
 
+  console.log("cartItems", cart);
   const formData = {
     userId,
-    items: Object.values(cartItems),
+    items: cart,
   };
 
   try {
-    const response = await axiosInstance.post(`${baseURL}/cart/save`, formData);
+    const response = await axiosInstance.post(`/cart/cart/save`, formData);
     console.log("Cart saved successfully:", response.data);
+    myMenu();
   } catch (error) {
     if (error.response) {
       console.log("Server responded with error:", error.response.data);
@@ -109,127 +156,114 @@ const updateCart = async () => {
   }
 };
 
+  const getTotalPrice = () => {
+    return Object.values(cartItems).reduce(
+      (total, item) => total + item.itemCost * item.quantity,
+      0
+    );
+  };
 
+  const renderItem = (item, key) => {
+    const quantity = cartItems[item._id]?.quantity || 0;
 
-
-const updateTimeoutRef = useRef(null);
-
-useEffect(() => {
-  if (updateTimeoutRef.current) {
-    clearTimeout(updateTimeoutRef.current);
-  }
-
-  updateTimeoutRef.current = setTimeout(() => {
-    updateCart();
-  }, 500);
-
-  return () => clearTimeout(updateTimeoutRef.current);
-}, [cartItems]);
-
-
-const getTotalPrice = () => {
-  return Object.values(cartItems).reduce(
-    (total, item) => total + item.itemCost * item.quantity,
-    0
-  );
-};
-
-const renderItem = (item, key) => {
-  const quantity = cartItems[item._id]?.quantity || 0;
-
-  return (
-    <View style={styles.itemContainer} key={key}>
-      <Image
-        source={{ uri: `${baseURL}/uploads/${item.image}` }}
-        style={styles.itemImage}
-      />
-      <View style={styles.itemInfo}>
-        <View style={styles.itemHeader}>
-          <View
-            style={[
-              styles.foodTypeIndicator,
-              { borderColor: item.type === "veg" ? "green" : "red" },
-            ]}
-          >
+    return (
+      <View style={styles.itemContainer} key={key}>
+        <Image
+         source={{ uri: item.image }}
+          style={styles.itemImage}
+        />
+        <View style={styles.itemInfo}>
+          <View style={styles.itemHeader}>
             <View
               style={[
-                styles.foodTypeDot,
-                { backgroundColor: item.type === "veg" ? "green" : "red" },
+                styles.foodTypeIndicator,
+                { borderColor: item.itemType === "Veg" ? "green" : "red" },
               ]}
-            />
-          </View>
-          <Text style={styles.itemName}>{item.itemName}</Text>
-        </View>
-        <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
-        <Text style={styles.itemDesc}>{item.description || ""}</Text>
-
-        {quantity === 0 ? (
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => addToCart(item)}
-          >
-            <Text style={styles.addButtonText}>ADD</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.quantityControls}>
-            <TouchableOpacity
-              style={styles.controlButton}
-              onPress={() => removeFromCart(item._id)}
             >
-              <Text style={styles.addButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.quantityText}>{quantity}</Text>
+              <View
+                style={[
+                  styles.foodTypeDot,
+                  { backgroundColor: item.itemType === "Veg" ? "green" : "red" },
+                ]}
+              />
+            </View>
+            <Text style={styles.itemName}>{item.itemName}</Text>
+          </View>
+          <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
+          <Text style={styles.itemDesc}>{item.description || ""}</Text>
+
+          {quantity === 0 ? (
             <TouchableOpacity
-              style={styles.controlButton}
+              style={styles.addButton}
               onPress={() => addToCart(item)}
             >
-              <Text style={styles.addButtonText}>+</Text>
+              <Text style={styles.addButtonText}>ADD</Text>
             </TouchableOpacity>
-          </View>
-        )}
+          ) : (
+            <View style={styles.quantityControls}>
+              <TouchableOpacity
+                style={styles.controlButton}
+                onPress={() => removeFromCart(item._id)}
+              >
+                <Text style={styles.addButtonText}>-</Text>
+              </TouchableOpacity>
+              <Text style={styles.quantityText}>{quantity}</Text>
+              <TouchableOpacity
+                style={styles.controlButton}
+                onPress={() => addToCart(item)}
+              >
+                <Text style={styles.addButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
-    </View>
-  );
-};
+    );
+  };
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView style={styles.container}>
-        {menuData.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.accordionSection}>
-            <TouchableOpacity
-              style={styles.accordionHeader}
-              onPress={() => toggleSection(section.name)}
-            >
-              <Text style={styles.accordionTitle}>{section.name}</Text>
-              <Text style={styles.accordionToggle}>
-                {activeSections[section.name] ? "▲" : "▼"}
-              </Text>
-            </TouchableOpacity>
+      {/* Toggle Veg / Non-Veg Buttons */}
+      <View style={{ flexDirection: "row", justifyContent: "center", margin: 10 }}>
+        <TouchableOpacity
+          style={[
+            styles.typeButton,
+            selectedType === "Veg" && styles.activeTypeButton,
+          ]}
+          onPress={() => setSelectedType("Veg")}
+        >
+          <Text style={styles.typeButtonText}>Veg</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.typeNonVegButton,
+            selectedType === "Non-Veg" && styles.activeTypeNonVegButton,
+          ]}
+          onPress={() => setSelectedType("Non-Veg")}
+        >
+          <Text style={styles.typeButtonText}>Non-Veg</Text>
+        </TouchableOpacity>
+      </View>
 
-            <Collapsible collapsed={!activeSections[section.name]}>
-              {section.items.map((item, itemIndex) =>
-                renderItem(item, `${sectionIndex}-${itemIndex}`)
-              )}
-            </Collapsible>
-          </View>
-        ))}
+      {/* Menu Items List */}
+      <ScrollView style={styles.container}>
+        {filteredMenu.map((item, index) => renderItem(item, index))}
       </ScrollView>
 
-     {Object.keys(cartItems).length > 0 && (
-  <TouchableOpacity
-    style={styles.cartBar}
-    onPress={() => navigation.navigate("Cart")}
-  >
-    <Text style={styles.cartText}>
-      {Object.keys(cartItems).length}{" "}
-      {Object.keys(cartItems).length === 1 ? "item" : "items"} | ₹
-      {getTotalPrice()}
-    </Text>
-    <Text style={styles.viewCartText}>View Cart</Text>
-  </TouchableOpacity>
-)}
-
+      {/* Cart Summary Bar */}
+      {Object.keys(cartItems).length > 0 && (
+        <TouchableOpacity
+          style={styles.cartBar}
+          onPress={() => navigation.navigate("Cart")}
+        >
+          <Text style={styles.cartText}>
+            {Object.keys(cartItems).length}{" "}
+            {Object.keys(cartItems).length === 1 ? "item" : "items"} | ₹
+            {getTotalPrice()}
+          </Text>
+          <Text style={styles.viewCartText}>View Cart</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -238,23 +272,6 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#fff",
     padding: 10,
-  },
-  accordionSection: {
-    marginBottom: 16,
-  },
-  accordionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-  accordionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  accordionToggle: {
-    fontSize: 14,
-    fontWeight: "600",
   },
   itemContainer: {
     flexDirection: "row",
@@ -351,24 +368,49 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   quantityControls: {
-  flexDirection: "row",
-  alignItems: "center",
-  marginTop: 8,
-},
-controlButton: {
-  borderWidth: 1,
-  borderColor: "#00b386",
-  borderRadius: 4,
-  paddingVertical: 2,
-  paddingHorizontal: 10,
-},
-quantityText: {
-  marginHorizontal: 10,
-  fontSize: 16,
-  fontWeight: "600",
-  color: "#000",
-},
-
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  controlButton: {
+    borderWidth: 1,
+    borderColor: "#00b386",
+    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+  },
+  quantityText: {
+    marginHorizontal: 10,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+  },
+  typeButton: {
+    borderWidth: 1,
+    borderColor: "#00b386",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    marginHorizontal: 10,
+  },
+  typeNonVegButton: {
+    borderWidth: 1,
+    borderColor: "red",
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+    marginHorizontal: 10,
+  },
+  activeTypeButton: {
+    backgroundColor: "#00b386",
+  },
+  activeTypeNonVegButton: {
+    backgroundColor: "red",
+  },
+  typeButtonText: {
+    color: "#000",
+    fontWeight: "600",
+  },
 });
 
 export default MenuScreen;

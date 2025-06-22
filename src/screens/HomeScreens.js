@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,46 +9,159 @@ import {
   Switch,
   SafeAreaView,
   StatusBar,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import axios from "axios";
+import axiosInstance, { baseURL } from "../axios/healpers";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-import { baseURL } from "../axios/healpers";
+import { useFocusEffect } from "@react-navigation/native";
 
 const HomeScreen = ({ navigation }) => {
   const [isVeg, setIsVeg] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
+  const [originalMenu, setOriginalMenu] = useState([]); // holds raw menu
+  const [menu, setMenu] = useState([]); // holds menu with quantities
+  const [cartItems, setCartItems] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const fetchCategories = async () => {
+  const fetchMenu = async () => {
     try {
-      const res = await axios.get(`${baseURL}/menu/getMenu`);
-      const enabledCategories = res.data.filter(
-        (cat) => cat.isEnabled !== false
-      );
-      setCategories(enabledCategories);
+      const res = await axiosInstance.get(`/menu/getAllMenu`);
+      const allMenu = res?.data?.menu || [];
+      setOriginalMenu(allMenu); // Save raw menu
+
+      const uniqueCategories = [
+        ...new Set(
+          allMenu
+            .filter((item) => item.isEnabled !== false)
+            .map((item) => item.itemCategory)
+        ),
+      ];
+
+      const formattedCategories = uniqueCategories.map((cat) => ({ name: cat }));
+      setCategoriesList(formattedCategories);
+    } catch (err) {
+      Alert.alert("Error", "No Categories Found");
+    }
+  };
+
+const convertCartToMap = (itemsArray) => {
+  const cartMap = {};
+  itemsArray.forEach((item) => {
+    cartMap[item.itemId] = { ...item };
+  });
+  return cartMap;
+};
+
+  const myMenu = async () => {
+    try {
+      const raw = await AsyncStorage.getItem("userId");
+      const userId = parseInt(JSON.parse(raw), 10);
+      const response = await axiosInstance.get(`/cart/getCart/${userId}`);
+      if (response.status === 200) {
+        const cartArray = response.data.items || [];
+        setCartItems(convertCartToMap(cartArray));
+      }
     } catch (error) {
-      console.error("Failed to fetch categories:", error.message);
+      console.error("Error fetching cart:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const items = [
-    { name: "Margherita Pizza", price: 12, type: "Veg" },
-    { name: "Burger", price: 12, type: "Non-Veg" },
-    { name: "Pasta", price: 12, type: "Veg" },
-    { name: "Fries", price: 12, type: "Veg" },
-  ];
-
-  const handleAddItem = (item) => {
-    setSelectedItem(item);
+  const updateCart = async (cart) => {
+    const userId = await AsyncStorage.getItem("userId");
+    if (!userId) return;
+    const formData = { userId, items: Object.values(cart) };
+    try {
+      await axiosInstance.post(`/cart/cart/save`, formData);
+      myMenu();
+    } catch (error) {
+      console.error("Cart update error:", error.message);
+    }
   };
+
+  const addToCart = (item) => {
+    setCartItems((prev) => {
+      const existing = prev[item._id];
+      const quantity = existing ? existing.quantity + 1 : 1;
+      const updated = {
+        ...prev,
+        [item._id]: {
+          ...item,
+          itemId: item._id,
+          quantity,
+        },
+      };
+      updateCart(updated);
+      return updated;
+    });
+  };
+
+  const removeFromCart = (item) => {
+    setCartItems((prev) => {
+      const existing = prev[item._id];
+      if (!existing) return prev;
+      const quantity = existing.quantity - 1;
+      let updated;
+      if (quantity <= 0) {
+        updated = { ...prev };
+        delete updated[item._id];
+      } else {
+        updated = {
+          ...prev,
+          [item._id]: { ...existing, quantity },
+        };
+      }
+      updateCart(updated);
+      return updated;
+    });
+  };
+
+  const getTotalPrice = () => {
+    return Object.values(cartItems).reduce(
+      (total, item) => total + item.itemCost * item.quantity,
+      0
+    );
+  };
+
+  // Merge quantity into menu items when cart or original menu changes
+  // useEffect(() => {
+  //   if (!loading && originalMenu.length > 0) {
+  //     const withQuantities = originalMenu.map((item) => ({
+  //       ...item,
+  //       quantity: cartItems[item._id]?.quantity || 0,
+  //       quantity: cartItems[item._id]?.quantity || 0,
+
+  //     }));
+  //     setMenu(withQuantities);
+  //   }
+  // }, [cartItems, loading, originalMenu]);
+
+  useEffect(() => {
+  if (!loading && originalMenu.length > 0) {
+    console.log("Merging quantities...");
+    console.log("cartItems", cartItems);
+    console.log("originalMenu", originalMenu);
+
+    const withQuantities = originalMenu.map((item) => ({
+      ...item,
+      quantity: cartItems[item._id]?.quantity || 0,
+    }));
+
+    setMenu(withQuantities);
+  }
+}, [cartItems, loading, originalMenu]);
+
+
+  useFocusEffect(
+  useCallback(() => {
+    fetchMenu();
+    myMenu();
+  }, [])
+);
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -62,11 +175,10 @@ const HomeScreen = ({ navigation }) => {
         >
           <View style={styles.bannerContainer}>
             <Image
-              source={require("../assets/BANNER1.png")} 
+              source={require("../assets/BANNER1.png")}
               style={styles.bannerImage}
             />
           </View>
-
           <View style={styles.filterContainer}>
             <Text style={styles.filterText}>Veg Only</Text>
             <Switch value={isVeg} onValueChange={setIsVeg} />
@@ -76,7 +188,7 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {categories.map((category, index) => (
+            {categoriesList.map((category, index) => (
               <TouchableOpacity key={index} style={styles.categoryButton}>
                 <Image
                   source={{
@@ -91,42 +203,44 @@ const HomeScreen = ({ navigation }) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bestsellers</Text>
+          <Text style={styles.sectionTitle}>Best Sales</Text>
           <View style={styles.itemsContainer}>
-            {items
-              .filter((item) => (isVeg ? item.type === "Veg" : true))
+            {menu
+              .filter((item) => (isVeg ? item.itemType === "Veg" : true))
               .map((item, index) => (
                 <View key={index} style={styles.itemCard}>
-                  <Image
-                    source={{
-                      uri: "https://img.freepik.com/free-photo/top-view-pepperoni-pizza-with-mushroom-sausages-bell-pepper-olive-corn-black-wooden_141793-2158.jpg",
-                    }}
-                    style={styles.itemImage}
-                  />
+                  <Image source={{ uri: item.image }} style={styles.itemImage} />
                   <View style={styles.itemDetails}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemPrice}>${item.price}</Text>
-                    <Text style={styles.itemType}>{item.type}</Text>
+                    <Text style={styles.itemName}>{item.itemName}</Text>
+                    <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
+                    <Text style={styles.itemType}>{item.itemType}</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => handleAddItem(item)}
-                  >
-                    <Ionicons name="add-circle" size={30} color="#ffba00" />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    {item.quantity > 0 && (
+                      <>
+                        <TouchableOpacity onPress={() => removeFromCart(item)}>
+                          <Ionicons name="remove-circle" size={30} color="red" />
+                        </TouchableOpacity>
+                        <Text style={{ marginHorizontal: 8 }}>{item.quantity}</Text>
+                      </>
+                    )}
+                    <TouchableOpacity onPress={() => addToCart(item)}>
+                      <Ionicons name="add-circle" size={30} color="#ffba00" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
           </View>
         </View>
       </ScrollView>
 
-      {selectedItem && (
+      {Object.keys(cartItems).length > 0 && (
         <TouchableOpacity
           style={styles.bottomBar}
           onPress={() => navigation.navigate("Cart")}
         >
           <Text style={styles.bottomBarText}>
-            1 item | ${selectedItem.price}
+            {Object.keys(cartItems).length} items | ₹{getTotalPrice()}
           </Text>
           <View style={styles.addToCartButton}>
             <Text style={styles.addToCartText}>View Cart</Text>
@@ -195,9 +309,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 5,
     fontWeight: "600",
-    textAlign: "center", // ✅ center text inside its container
+    textAlign: "center",
   },
-
   itemsContainer: {
     flexDirection: "column",
   },
@@ -231,9 +344,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "green",
   },
-  addButton: {
-    padding: 5,
-  },
   bottomBar: {
     backgroundColor: "#ffba00",
     height: 60,
@@ -254,12 +364,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
   },
-  // addToCartButton: {
-  //   backgroundColor: "#0c3b2e",
-  //   paddingVertical: 6,
-  //   paddingHorizontal: 14,
-  //   borderRadius: 6,
-  // },
   addToCartText: {
     color: "black",
     fontWeight: "bold",

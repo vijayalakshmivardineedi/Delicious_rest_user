@@ -21,7 +21,7 @@ const ProfileScreen = ({ navigation }) => {
       try {
         const userId = await AsyncStorage.getItem("userId");
 
-        const res = await axiosInstance.get(`${baseURL}/me`, userId);
+        const res = await axiosInstance.get(`/me`, userId);
         setUser(res.data);
       } catch (err) {
         console.error("Fetch Error:", err.message);

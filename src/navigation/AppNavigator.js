@@ -76,7 +76,7 @@ const AppNavigator = () => {
         <Tab.Screen
           name="Menu"
           component={MenuScreen}
-          options={{
+         options={({ navigation }) => ({
             tabBarLabel: "Menu",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="list" size={size} color={color} />
@@ -87,10 +87,10 @@ const AppNavigator = () => {
                 size={24}
                 color="#000"
                 style={{ marginRight: 15 }}
-                onPress={() => navigation.navigate("Cart")} // Navigate to Cart screen
+                onPress={() => navigation.navigate("Cart")}
               />
             ),
-          }}
+          })}
         />
         <Tab.Screen
           name="Profile"

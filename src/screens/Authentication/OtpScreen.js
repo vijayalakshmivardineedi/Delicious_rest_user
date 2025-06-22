@@ -34,7 +34,7 @@ const OtpScreen = ({ route, navigation }) => {
   const formData={phone: phoneNumber,
         otp: enteredOtp,}
   try {
-    const response = await axiosInstance.post(`${baseURL}/login`, formData);
+    const response = await axiosInstance.post(`/login`, formData);
 
     const data = await response?.data;
 

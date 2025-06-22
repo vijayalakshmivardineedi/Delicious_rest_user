@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,61 +8,47 @@ import {
   Image,
   ScrollView,
   TextInput,
+  Modal,
 } from "react-native";
-import { Modal } from "react-native";
-import { useNavigation } from '@react-navigation/native';
-
-const cartItemsData = [
-  {
-    id: "1",
-    name: "Classic Hot Coffee",
-    price: 150,
-    quantity: 1,
-    type: "veg",
-    image:
-      "https://img.freepik.com/free-psd/top-view-delicious-pizza_23-2151868956.jpg?t=st=1742108540~exp=1742112140~hmac=6b1d718cf9aa131c5d7532ff14ae50539db74da00f51398ad2304f9c43d3bd22&w=740",
-  },
-  {
-    id: "2",
-    name: "Paneer Tikka Wrap",
-    price: 180,
-    quantity: 2,
-    type: "veg",
-    image:
-      "https://img.freepik.com/free-psd/top-view-delicious-pizza_23-2151868956.jpg?t=st=1742108540~exp=1742112140~hmac=6b1d718cf9aa131c5d7532ff14ae50539db74da00f51398ad2304f9c43d3bd22&w=740",
-  },
-];
-
-const suggestionsData = [
-  {
-    id: "s1",
-    name: "Masala Potato Puff",
-    price: 160,
-    image:
-      "https://img.freepik.com/free-psd/top-view-delicious-pizza_23-2151868956.jpg?t=st=1742108540~exp=1742112140~hmac=6b1d718cf9aa131c5d7532ff14ae50539db74da00f51398ad2304f9c43d3bd22&w=740",
-  },
-  {
-    id: "s2",
-    name: "Lebanese Sandwich",
-    price: 265,
-    image:
-      "https://img.freepik.com/free-psd/top-view-delicious-pizza_23-2151868956.jpg?t=st=1742108540~exp=1742112140~hmac=6b1d718cf9aa131c5d7532ff14ae50539db74da00f51398ad2304f9c43d3bd22&w=740",
-  },
-  {
-    id: "s3",
-    name: "Double Choco Brownie",
-    price: 235,
-    image:
-      "https://img.freepik.com/free-psd/top-view-delicious-pizza_23-2151868956.jpg?t=st=1742108540~exp=1742112140~hmac=6b1d718cf9aa131c5d7532ff14ae50539db74da00f51398ad2304f9c43d3bd22&w=740",
-  },
-];
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import axiosInstance from "../axios/healpers";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CartScreen = () => {
-  const [cartItems, setCartItems] = useState(cartItemsData);
-  const navigation = useNavigation();
+  const [cartItems, setCartItems] = useState([]);
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [suggestionsData, setSuggestionsData] = useState([]);
   const [address, setAddress] = useState("");
+  const navigation = useNavigation();
+
+  const myCart = async () => {
+    try {
+      const raw = await AsyncStorage.getItem("userId");
+      const userId = parseInt(JSON.parse(raw), 10);
+      const response = await axiosInstance.get(`/cart/getCart/${userId}`);
+      setCartItems(response.data.items);
+    } catch (error) {
+      console.error("Error fetching cart:", error);
+    }
+  };
+
+  const getSuggestions = async () => {
+    try {
+      const response = await axiosInstance.get(`/menu/getRandomMenu`);
+      setSuggestionsData(response.data.menu);
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      myCart();
+      getSuggestions();
+    }, [])
+  );
+
   const availableCoupons = [
     {
       id: "c1",
@@ -78,26 +64,78 @@ const CartScreen = () => {
     },
   ];
 
-  const increaseQty = (id) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      )
-    );
+  const increaseQty = (item) => {
+    setCartItems((prev) => {
+      const existing = prev.find((i) => i._id === item._id);
+      const updatedItem = { ...existing, quantity: existing.quantity + 1 };
+      const updatedCart = prev.map((i) =>
+        i._id === item._id ? updatedItem : i
+      );
+      updateCartItem(updatedItem);
+      return updatedCart;
+    });
   };
 
-  const decreaseQty = (id) => {
-    setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
-      )
-    );
+  const decreaseQty = (item) => {
+    setCartItems((prev) => {
+      const existing = prev.find((i) => i._id === item._id);
+      if (!existing) return prev;
+
+      if (existing.quantity === 1) {
+        const updatedCart = prev.filter((i) => i._id !== item._id);
+        deleteCartItem(item);
+        return updatedCart;
+      }
+
+      const updatedItem = { ...existing, quantity: existing.quantity - 1 };
+      const updatedCart = prev.map((i) =>
+        i._id === item._id ? updatedItem : i
+      );
+      updateCartItem(updatedItem);
+      return updatedCart;
+    });
+  };
+
+  const updateCartItem = async (item) => {
+    const raw = await AsyncStorage.getItem("userId");
+    const userId = JSON.parse(raw);
+
+    try {
+      await axiosInstance.put(`/cart/updateCart`, {
+        userId,
+        items: {
+          [item.itemId]: {
+            ...item,
+            itemId: item.itemId,
+            quantity: item.quantity,
+          },
+        },
+      });
+      console.log("Cart item updated successfully");
+    } catch (error) {
+      console.error("Update failed:", error?.response?.data || error.message);
+    }
+  };
+
+  const deleteCartItem = async (item) => {
+    const raw = await AsyncStorage.getItem("userId");
+    const userId = JSON.parse(raw);
+
+    try {
+      await axiosInstance.put(`/cart/updateCart`, {
+        userId,
+        items: {
+          [item.itemId]: null,
+        },
+      });
+      console.log("Cart item deleted successfully");
+    } catch (error) {
+      console.error("Delete failed:", error?.response?.data || error.message);
+    }
   };
 
   const getTotal = () =>
-    cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+    cartItems.reduce((total, item) => total + item.itemCost * item.quantity, 0);
 
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
@@ -117,42 +155,34 @@ const CartScreen = () => {
               ]}
             />
           </View>
-          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemName}>{item.itemName}</Text>
         </View>
         <View style={styles.qtyRow}>
-          <TouchableOpacity
-            style={styles.qtyBtn}
-            onPress={() => decreaseQty(item.id)}
-          >
+          <TouchableOpacity style={styles.qtyBtn} onPress={() => decreaseQty(item)}>
             <Text style={styles.qtyText}>-</Text>
           </TouchableOpacity>
           <Text style={styles.qtyCount}>{item.quantity}</Text>
-          <TouchableOpacity
-            style={styles.qtyBtn}
-            onPress={() => increaseQty(item.id)}
-          >
+          <TouchableOpacity style={styles.qtyBtn} onPress={() => increaseQty(item)}>
             <Text style={styles.qtyText}>+</Text>
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={styles.itemTotal}>₹{item.price * item.quantity}</Text>
+      <Text style={styles.itemTotal}>₹{item.itemCost * item.quantity}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll}>
-        {/* Cart Items */}
         <View style={styles.section}>
           <FlatList
             data={cartItems}
             renderItem={renderCartItem}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => item._id}
             scrollEnabled={false}
           />
         </View>
 
-        {/* Cooking requests & Add more */}
         <View style={styles.cookingRequest}>
           <Text style={styles.note}>📝 Cooking requests</Text>
           <TouchableOpacity>
@@ -160,24 +190,19 @@ const CartScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Complete Your Meal */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Complete your meal</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {suggestionsData.map((item) => (
-              <View key={item.id} style={styles.suggestionItem}>
-                <Image
-                  source={{ uri: item.image }}
-                  style={styles.suggestionImg}
-                />
-                <Text style={styles.suggestionName}>{item.name}</Text>
-                <Text style={styles.suggestionPrice}>₹{item.price}</Text>
+            {suggestionsData?.map((item) => (
+              <View key={item._id} style={styles.suggestionItem}>
+                <Image source={{ uri: item.image }} style={styles.suggestionImg} />
+                <Text style={styles.suggestionName}>{item.itemName}</Text>
+                <Text style={styles.suggestionPrice}>₹{item.itemCost}</Text>
               </View>
             ))}
           </ScrollView>
         </View>
 
-        {/* Delivery Location Section (moved here) */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Location</Text>
           <TextInput
@@ -188,7 +213,6 @@ const CartScreen = () => {
           />
         </View>
 
-        {/* Coupon */}
         <TouchableOpacity
           style={styles.section}
           onPress={() => setCouponModalVisible(true)}
@@ -198,13 +222,11 @@ const CartScreen = () => {
           </Text>
         </TouchableOpacity>
 
-        {/* Delivery Type */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Type</Text>
           <Text style={styles.subText}>🚚 Standard • 35–40 mins</Text>
         </View>
 
-        {/* Tip */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tip</Text>
           <Text style={styles.subText}>
@@ -212,6 +234,7 @@ const CartScreen = () => {
           </Text>
         </View>
       </ScrollView>
+
       <Modal
         visible={couponModalVisible}
         transparent
@@ -221,8 +244,7 @@ const CartScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Available Coupons</Text>
-
-            {availableCoupons.map((coupon) => (
+            {availableCoupons?.map((coupon) => (
               <TouchableOpacity
                 key={coupon.id}
                 style={styles.couponCard}
@@ -235,7 +257,6 @@ const CartScreen = () => {
                 <Text style={styles.couponDesc}>{coupon.desc}</Text>
               </TouchableOpacity>
             ))}
-
             <TouchableOpacity onPress={() => setCouponModalVisible(false)}>
               <Text style={styles.modalClose}>Close</Text>
             </TouchableOpacity>
@@ -243,12 +264,15 @@ const CartScreen = () => {
         </View>
       </Modal>
 
-      {/* Bottom Pay Bar */}
       <View style={styles.footer}>
         <Text style={styles.totalAmount}>₹{getTotal()}</Text>
         <TouchableOpacity style={styles.payButton}>
-          <Text style={styles.payText}
-          onPress={() => navigation.replace('CheckoutScreen')}>Pay ₹{getTotal()}</Text>
+          <Text
+            style={styles.payText}
+            onPress={() => navigation.replace('CheckoutScreen')}
+          >
+            Pay ₹{getTotal()}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
