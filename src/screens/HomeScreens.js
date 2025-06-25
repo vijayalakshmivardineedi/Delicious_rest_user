@@ -27,32 +27,43 @@ const HomeScreen = ({ navigation }) => {
 
   const fetchMenu = async () => {
     try {
-      const res = await axiosInstance.get(`/menu/getAllMenu`);
-      const allMenu = res?.data?.menu || [];
-      setOriginalMenu(allMenu); // Save raw menu
+      const res = await axiosInstance.get(`/menu/getMenu`);
+      const allMenu = res?.data || []; // remove `.menu`
+      setOriginalMenu(allMenu); // Save full category list
 
-      const uniqueCategories = [
-        ...new Set(
-          allMenu
-            .filter((item) => item.isEnabled !== false)
-            .map((item) => item.itemCategory)
-        ),
-      ];
+      const formattedCategories = allMenu
+        .filter((cat) => cat.isEnabled !== false)
+        .map((cat) => ({
+          name: cat.name,
+          image: cat.cateimage,
+        }));
 
-      const formattedCategories = uniqueCategories.map((cat) => ({ name: cat }));
       setCategoriesList(formattedCategories);
+
+      // Optionally flatten all items into a list
+      const items = allMenu
+        .filter((cat) => cat.isEnabled !== false)
+        .flatMap((cat) =>
+          (cat.items || []).map((item) => ({
+            ...item,
+            itemCategory: cat.name,
+            itemType: cat.categoryType,
+          }))
+        );
+      setOriginalMenu(items);
     } catch (err) {
       Alert.alert("Error", "No Categories Found");
+      console.error("Menu Fetch Error:", err);
     }
   };
 
-const convertCartToMap = (itemsArray) => {
-  const cartMap = {};
-  itemsArray.forEach((item) => {
-    cartMap[item.itemId] = { ...item };
-  });
-  return cartMap;
-};
+  const convertCartToMap = (itemsArray) => {
+    const cartMap = {};
+    itemsArray.forEach((item) => {
+      cartMap[item.itemId] = { ...item };
+    });
+    return cartMap;
+  };
 
   const myMenu = async () => {
     try {
@@ -126,42 +137,27 @@ const convertCartToMap = (itemsArray) => {
     );
   };
 
-  // Merge quantity into menu items when cart or original menu changes
-  // useEffect(() => {
-  //   if (!loading && originalMenu.length > 0) {
-  //     const withQuantities = originalMenu.map((item) => ({
-  //       ...item,
-  //       quantity: cartItems[item._id]?.quantity || 0,
-  //       quantity: cartItems[item._id]?.quantity || 0,
-
-  //     }));
-  //     setMenu(withQuantities);
-  //   }
-  // }, [cartItems, loading, originalMenu]);
-
   useEffect(() => {
-  if (!loading && originalMenu.length > 0) {
-    console.log("Merging quantities...");
-    console.log("cartItems", cartItems);
-    console.log("originalMenu", originalMenu);
+    if (!loading && originalMenu.length > 0) {
+      console.log("Merging quantities...");
+      console.log("cartItems", cartItems);
+      console.log("originalMenu", originalMenu);
 
-    const withQuantities = originalMenu.map((item) => ({
-      ...item,
-      quantity: cartItems[item._id]?.quantity || 0,
-    }));
+      const withQuantities = originalMenu.map((item) => ({
+        ...item,
+        quantity: cartItems[item._id]?.quantity || 0,
+      }));
 
-    setMenu(withQuantities);
-  }
-}, [cartItems, loading, originalMenu]);
-
+      setMenu(withQuantities);
+    }
+  }, [cartItems, loading, originalMenu]);
 
   useFocusEffect(
-  useCallback(() => {
-    fetchMenu();
-    myMenu();
-  }, [])
-);
-
+    useCallback(() => {
+      fetchMenu();
+      myMenu();
+    }, [])
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -192,7 +188,7 @@ const convertCartToMap = (itemsArray) => {
               <TouchableOpacity key={index} style={styles.categoryButton}>
                 <Image
                   source={{
-                    uri: "https://img.freepik.com/free-psd/top-view-delicious-pizza_23-2151868956.jpg",
+                    uri: `${baseURL}/uploads/${category.image}`,
                   }}
                   style={styles.categoryImage}
                 />
@@ -203,13 +199,16 @@ const convertCartToMap = (itemsArray) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Best Sales</Text>
+          <Text style={styles.sectionTitle}>Best Sellers</Text>
           <View style={styles.itemsContainer}>
             {menu
               .filter((item) => (isVeg ? item.itemType === "Veg" : true))
               .map((item, index) => (
                 <View key={index} style={styles.itemCard}>
-                  <Image source={{ uri: item.image }} style={styles.itemImage} />
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.itemImage}
+                  />
                   <View style={styles.itemDetails}>
                     <Text style={styles.itemName}>{item.itemName}</Text>
                     <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
@@ -219,9 +218,15 @@ const convertCartToMap = (itemsArray) => {
                     {item.quantity > 0 && (
                       <>
                         <TouchableOpacity onPress={() => removeFromCart(item)}>
-                          <Ionicons name="remove-circle" size={30} color="red" />
+                          <Ionicons
+                            name="remove-circle"
+                            size={30}
+                            color="red"
+                          />
                         </TouchableOpacity>
-                        <Text style={{ marginHorizontal: 8 }}>{item.quantity}</Text>
+                        <Text style={{ marginHorizontal: 8 }}>
+                          {item.quantity}
+                        </Text>
                       </>
                     )}
                     <TouchableOpacity onPress={() => addToCart(item)}>

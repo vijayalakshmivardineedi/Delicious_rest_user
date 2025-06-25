@@ -8,153 +8,105 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axiosInstance, { baseURL } from "../axios/healpers";
-import { useFocusEffect } from "@react-navigation/native";
+import Collapsible from "react-native-collapsible";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axiosInstance from "../axios/healpers";
 
-const MenuScreen = ({ navigation }) => {
+const MenuScreen = () => {
   const [menuData, setMenuData] = useState([]);
-  const [filteredMenu, setFilteredMenu] = useState([]);
-  const [selectedType, setSelectedType] = useState("Veg");
+  const [activeSections, setActiveSections] = useState({});
   const [cartItems, setCartItems] = useState({});
-  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
 
-  
-    const fetchMenu = async () => {
-      try {
-        const res = await axiosInstance.get(`/menu/getAllMenu`);
-        const allMenu = res?.data?.menu || [];
-        setMenuData(allMenu);
-      } catch (err) {
-        Alert.alert("Error", "No Menu Found");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchMenu = async () => {
+    try {
+      const res = await axiosInstance.get("/menu/getMenu");
+      setMenuData(res.data || []);
+    } catch (err) {
+      Alert.alert("Error", "No Menu Found");
+    }
+  };
 
-    const convertCartToMap = (itemsArray) => {
-  const cartMap = {};
-  itemsArray.forEach((item) => {
-    cartMap[item.itemId] = { ...item }; // key = itemId
-  });
-  return cartMap;
-};
+  const convertCartToMap = (itemsArray) => {
+    const cartMap = {};
+    itemsArray.forEach((item) => {
+      cartMap[item.itemId] = { ...item };
+    });
+    return cartMap;
+  };
 
-
-
-     const myMenu = async () => {
-        try {
-          const raw = await AsyncStorage.getItem("userId");
-          const userId = parseInt(JSON.parse(raw), 10);
-          const response = await axiosInstance.get(`/cart/getCart/${userId}`);
-         
-            if (response.status === 200) {
+  const fetchCart = async () => {
+    try {
+      const raw = await AsyncStorage.getItem("userId");
+      const userId = JSON.parse(raw);
+      const response = await axiosInstance.get(`/cart/getCart/${userId}`);
+      if (response.status === 200) {
         const cartArray = response.data.items || [];
         setCartItems(convertCartToMap(cartArray));
       }
-          
-        } catch (error) {
-          console.error("Error fetching cart:", error);
-        } finally {
-          setLoading(false);
-        }
-      };
-
-useEffect(() => {
-  const updatedMenu = menuData.map(item => ({
-    ...item,
-    quantity: cartItems[item._id]?.quantity || 0,
-  }));
-  setFilteredMenu(updatedMenu.filter(i => i.itemType === selectedType));
-}, [cartItems, menuData, selectedType]);
-
-
-
-  useFocusEffect(
-  useCallback(() => {
-    fetchMenu();
-    myMenu();
-  }, [])
-);
-
-
-  useEffect(() => {
-    const filtered = menuData.filter(item => item.itemType === selectedType);
-    setFilteredMenu(filtered);
-  }, [menuData, selectedType]);
-
-const addToCart = (item) => {
-  console.log("itemtype", item)
-  setCartItems((prev) => {
-    const existingItem = prev[item._id];
-    const quantity = existingItem ? existingItem.quantity + 1 : 1;
-
-    const updatedCart = {
-      ...prev,
-      [item._id]: { ...item, quantity },
-    };
-
-    updateCart(updatedCart);
-
-    return updatedCart;
-  });
-};
-
-
-const removeFromCart = (itemId) => {
-  setCartItems((prev) => {
-    const existingItem = prev[itemId];
-    if (!existingItem) return prev;
-
-    let updatedCart;
-
-    const newQuantity = existingItem.quantity - 1;
-    if (newQuantity <= 0) {
-      updatedCart = { ...prev };
-      delete updatedCart[itemId];
-    } else {
-      updatedCart = {
-        ...prev,
-        [itemId]: { ...existingItem, quantity: newQuantity },
-      };
+    } catch (error) {
+      console.error("Error fetching cart:", error);
     }
-    updateCart(updatedCart);
-
-    return updatedCart;
-  });
-};
-
-const updateCart = async (cart) => {
-  console.log("hitting");
-
-  const userId = await AsyncStorage.getItem("userId");
-  console.log("userId:", userId);
-
-  if (!userId) {
-    console.warn("No userId found in AsyncStorage");
-    return;
-  }
-
-  console.log("cartItems", cart);
-  const formData = {
-    userId,
-    items: cart,
   };
 
-  try {
-    const response = await axiosInstance.post(`/cart/cart/save`, formData);
-    console.log("Cart saved successfully:", response.data);
-    myMenu();
-  } catch (error) {
-    if (error.response) {
-      console.log("Server responded with error:", error.response.data);
-    } else if (error.request) {
-      console.log("Request made but no response:", error.request);
-    } else {
-      console.log("Axios config error:", error.message);
+  useFocusEffect(
+    useCallback(() => {
+      fetchMenu();
+      fetchCart();
+    }, [])
+  );
+
+  const toggleSection = (category) => {
+    setActiveSections((prev) => ({
+      ...prev,
+      [category]: !prev[category],
+    }));
+  };
+
+  const addToCart = (item) => {
+    setCartItems((prev) => {
+      const existing = prev[item._id];
+      const quantity = existing ? existing.quantity + 1 : 1;
+      const updated = {
+        ...prev,
+        [item._id]: { ...item, quantity },
+      };
+      updateCart(updated);
+      return updated;
+    });
+  };
+
+  const removeFromCart = (itemId) => {
+    setCartItems((prev) => {
+      const existing = prev[itemId];
+      if (!existing) return prev;
+      const quantity = existing.quantity - 1;
+
+      let updated = { ...prev };
+      if (quantity <= 0) {
+        delete updated[itemId];
+      } else {
+        updated[itemId] = { ...existing, quantity };
+      }
+
+      updateCart(updated);
+      return updated;
+    });
+  };
+
+  const updateCart = async (cart) => {
+    const raw = await AsyncStorage.getItem("userId");
+    const userId = JSON.parse(raw);
+    const formData = { userId, items: cart };
+
+    try {
+      await axiosInstance.post("/cart/cart/save", formData);
+      fetchCart(); // Refresh cart
+    } catch (error) {
+      console.error("Error saving cart:", error);
     }
-  }
-};
+  };
 
   const getTotalPrice = () => {
     return Object.values(cartItems).reduce(
@@ -165,11 +117,10 @@ const updateCart = async (cart) => {
 
   const renderItem = (item, key) => {
     const quantity = cartItems[item._id]?.quantity || 0;
-
     return (
       <View style={styles.itemContainer} key={key}>
         <Image
-         source={{ uri: item.image }}
+          source={{ uri: `http://192.168.29.186:2000/uploads/${item.image}` }}
           style={styles.itemImage}
         />
         <View style={styles.itemInfo}>
@@ -177,13 +128,13 @@ const updateCart = async (cart) => {
             <View
               style={[
                 styles.foodTypeIndicator,
-                { borderColor: item.itemType === "Veg" ? "green" : "red" },
+                { borderColor: item.type === "veg" ? "green" : "red" },
               ]}
             >
               <View
                 style={[
                   styles.foodTypeDot,
-                  { backgroundColor: item.itemType === "Veg" ? "green" : "red" },
+                  { backgroundColor: item.type === "veg" ? "green" : "red" },
                 ]}
               />
             </View>
@@ -223,34 +174,28 @@ const updateCart = async (cart) => {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Toggle Veg / Non-Veg Buttons */}
-      <View style={{ flexDirection: "row", justifyContent: "center", margin: 10 }}>
-        <TouchableOpacity
-          style={[
-            styles.typeButton,
-            selectedType === "Veg" && styles.activeTypeButton,
-          ]}
-          onPress={() => setSelectedType("Veg")}
-        >
-          <Text style={styles.typeButtonText}>Veg</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.typeNonVegButton,
-            selectedType === "Non-Veg" && styles.activeTypeNonVegButton,
-          ]}
-          onPress={() => setSelectedType("Non-Veg")}
-        >
-          <Text style={styles.typeButtonText}>Non-Veg</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Menu Items List */}
       <ScrollView style={styles.container}>
-        {filteredMenu.map((item, index) => renderItem(item, index))}
+        {menuData.map((section, sectionIndex) => (
+          <View key={sectionIndex} style={styles.accordionSection}>
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => toggleSection(section.name)}
+            >
+              <Text style={styles.accordionTitle}>{section.name}</Text>
+              <Text style={styles.accordionToggle}>
+                {activeSections[section.name] ? "▲" : "▼"}
+              </Text>
+            </TouchableOpacity>
+
+            <Collapsible collapsed={!activeSections[section.name]}>
+              {section.items.map((item, itemIndex) =>
+                renderItem(item, `${sectionIndex}-${itemIndex}`)
+              )}
+            </Collapsible>
+          </View>
+        ))}
       </ScrollView>
 
-      {/* Cart Summary Bar */}
       {Object.keys(cartItems).length > 0 && (
         <TouchableOpacity
           style={styles.cartBar}
@@ -269,10 +214,17 @@ const updateCart = async (cart) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#fff",
-    padding: 10,
+  container: { backgroundColor: "#fff", padding: 10 },
+  accordionSection: { marginBottom: 16 },
+  accordionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 10,
   },
+  accordionTitle: { fontSize: 18, fontWeight: "600" },
+  accordionToggle: { fontSize: 14, fontWeight: "600" },
+
   itemContainer: {
     flexDirection: "row",
     marginTop: 12,
@@ -338,6 +290,24 @@ const styles = StyleSheet.create({
     color: "#00b386",
     fontWeight: "600",
   },
+  quantityControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  controlButton: {
+    borderWidth: 1,
+    borderColor: "#00b386",
+    borderRadius: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 10,
+  },
+  quantityText: {
+    marginHorizontal: 10,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000",
+  },
   cartBar: {
     position: "absolute",
     bottom: 20,
@@ -366,50 +336,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#000",
-  },
-  quantityControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  controlButton: {
-    borderWidth: 1,
-    borderColor: "#00b386",
-    borderRadius: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 10,
-  },
-  quantityText: {
-    marginHorizontal: 10,
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#000",
-  },
-  typeButton: {
-    borderWidth: 1,
-    borderColor: "#00b386",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    marginHorizontal: 10,
-  },
-  typeNonVegButton: {
-    borderWidth: 1,
-    borderColor: "red",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 20,
-    marginHorizontal: 10,
-  },
-  activeTypeButton: {
-    backgroundColor: "#00b386",
-  },
-  activeTypeNonVegButton: {
-    backgroundColor: "red",
-  },
-  typeButtonText: {
-    color: "#000",
-    fontWeight: "600",
   },
 });
 
