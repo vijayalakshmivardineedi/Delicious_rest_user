@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,9 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  Alert,
 } from "react-native";
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import axiosInstance from "../axios/healpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -18,8 +19,10 @@ const CartScreen = () => {
   const [cartItems, setCartItems] = useState([]);
   const [couponModalVisible, setCouponModalVisible] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [suggestionsData, setSuggestionsData] = useState([]);
-  const [address, setAddress] = useState("");
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState("");
+  const [customAddress, setCustomAddress] = useState("");
+  const [locationData, setLocationData] = useState(null);
   const navigation = useNavigation();
 
   const myCart = async () => {
@@ -33,44 +36,48 @@ const CartScreen = () => {
     }
   };
 
-  const getSuggestions = async () => {
-    try {
-      const response = await axiosInstance.get(`/menu/getRandomMenu`);
-      setSuggestionsData(response.data.menu);
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
+  const fetchLocationData = async () => {
+  try {
+    const rawUserId = await AsyncStorage.getItem("userId");
+    const userId = parseInt(JSON.parse(rawUserId), 10);
+
+    const token = await AsyncStorage.getItem("token"); // get the token
+    if (!token) throw new Error("No token found");
+
+    const response = await axiosInstance.get(`/location/${userId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 200) {
+      setLocationData(response.data); // or .data.location based on backend
     }
-  };
+  } catch (error) {
+    console.log("Error fetching location:", error?.response?.data || error.message);
+    Alert.alert("Error", "Failed to fetch address");
+  }
+};
+
+
 
   useFocusEffect(
     useCallback(() => {
       myCart();
-      getSuggestions();
+      fetchLocationData();
     }, [])
   );
 
   const availableCoupons = [
-    {
-      id: "c1",
-      code: "SAVE50",
-      desc: "Flat ₹50 off on orders above ₹199",
-      discount: 50,
-    },
-    {
-      id: "c2",
-      code: "NEWUSER75",
-      desc: "₹75 off for new users",
-      discount: 75,
-    },
+    { id: "c1", code: "SAVE50", desc: "Flat ₹50 off on orders above ₹199", discount: 50 },
+    { id: "c2", code: "NEWUSER75", desc: "₹75 off for new users", discount: 75 },
   ];
 
   const increaseQty = (item) => {
     setCartItems((prev) => {
       const existing = prev.find((i) => i._id === item._id);
       const updatedItem = { ...existing, quantity: existing.quantity + 1 };
-      const updatedCart = prev.map((i) =>
-        i._id === item._id ? updatedItem : i
-      );
+      const updatedCart = prev.map((i) => (i._id === item._id ? updatedItem : i));
       updateCartItem(updatedItem);
       return updatedCart;
     });
@@ -88,9 +95,7 @@ const CartScreen = () => {
       }
 
       const updatedItem = { ...existing, quantity: existing.quantity - 1 };
-      const updatedCart = prev.map((i) =>
-        i._id === item._id ? updatedItem : i
-      );
+      const updatedCart = prev.map((i) => (i._id === item._id ? updatedItem : i));
       updateCartItem(updatedItem);
       return updatedCart;
     });
@@ -99,7 +104,6 @@ const CartScreen = () => {
   const updateCartItem = async (item) => {
     const raw = await AsyncStorage.getItem("userId");
     const userId = JSON.parse(raw);
-
     try {
       await axiosInstance.put(`/cart/updateCart`, {
         userId,
@@ -111,7 +115,6 @@ const CartScreen = () => {
           },
         },
       });
-      console.log("Cart item updated successfully");
     } catch (error) {
       console.error("Update failed:", error?.response?.data || error.message);
     }
@@ -120,15 +123,21 @@ const CartScreen = () => {
   const deleteCartItem = async (item) => {
     const raw = await AsyncStorage.getItem("userId");
     const userId = JSON.parse(raw);
-
     try {
+      const updatedItems = cartItems
+        .filter((i) => i.itemId !== item.itemId)
+        .reduce((acc, curr) => {
+          acc[curr.itemId] = {
+            ...curr,
+            itemId: curr.itemId,
+            quantity: curr.quantity,
+          };
+          return acc;
+        }, {});
       await axiosInstance.put(`/cart/updateCart`, {
         userId,
-        items: {
-          [item.itemId]: null,
-        },
+        items: updatedItems,
       });
-      console.log("Cart item deleted successfully");
     } catch (error) {
       console.error("Delete failed:", error?.response?.data || error.message);
     }
@@ -185,38 +194,16 @@ const CartScreen = () => {
 
         <View style={styles.cookingRequest}>
           <Text style={styles.note}>📝 Cooking requests</Text>
-          <TouchableOpacity>
-            <Text style={styles.link}>+ Add more items</Text>
-          </TouchableOpacity>
+          <TextInput style={styles.addressInput} placeholder="E.g., less spicy, no onions" />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Complete your meal</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {suggestionsData?.map((item) => (
-              <View key={item._id} style={styles.suggestionItem}>
-                <Image source={{ uri: item.image }} style={styles.suggestionImg} />
-                <Text style={styles.suggestionName}>{item.itemName}</Text>
-                <Text style={styles.suggestionPrice}>₹{item.itemCost}</Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+        <TouchableOpacity style={styles.section} onPress={() => setLocationModalVisible(true)}>
+          <Text style={styles.sectionTitle}>
+            Delivery Location {selectedAddress ? `• ${selectedAddress}` : ""}
+          </Text>
+        </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Location</Text>
-          <TextInput
-            style={styles.addressInput}
-            placeholder="Enter your delivery address"
-            value={address}
-            onChangeText={setAddress}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={styles.section}
-          onPress={() => setCouponModalVisible(true)}
-        >
+        <TouchableOpacity style={styles.section} onPress={() => setCouponModalVisible(true)}>
           <Text style={styles.sectionTitle}>
             Apply Coupon {appliedCoupon ? `• ${appliedCoupon.code}` : ""}
           </Text>
@@ -229,12 +216,11 @@ const CartScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tip</Text>
-          <Text style={styles.subText}>
-            Show appreciation to your delivery partner
-          </Text>
+          <Text style={styles.subText}>Show appreciation to your delivery partner</Text>
         </View>
       </ScrollView>
 
+      {/* Coupon Modal */}
       <Modal
         visible={couponModalVisible}
         transparent
@@ -244,7 +230,7 @@ const CartScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Available Coupons</Text>
-            {availableCoupons?.map((coupon) => (
+            {availableCoupons.map((coupon) => (
               <TouchableOpacity
                 key={coupon.id}
                 style={styles.couponCard}
@@ -264,15 +250,68 @@ const CartScreen = () => {
         </View>
       </Modal>
 
+      {/* Location Modal */}
+      <Modal
+        visible={locationModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Select Delivery Address</Text>
+
+            {locationData && (
+              <View style={styles.card}>
+                <View style={styles.row}>
+                  <Text style={styles.label}>User ID: </Text>
+                  <Text style={styles.value}>{locationData.userId}</Text>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.card}>
+              {locationData?.address?.map((addr, index) => (
+                <TouchableOpacity
+                  key={addr._id || index}
+                  style={styles.addressBlock}
+                  onPress={() => {
+                    setSelectedAddress(
+                      `${addr.address1}, ${addr.city} - ${addr.postalCode}`
+                    );
+                    setLocationModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.label}>Address {index + 1}</Text>
+                  <Text style={styles.label}>Address Line 1:</Text>
+                  <Text style={styles.value}>{addr.address1}</Text>
+                  <Text style={styles.label}>Address Line 2:</Text>
+                  <Text style={styles.value}>{addr.address2}</Text>
+                  <Text style={styles.label}>City:</Text>
+                  <Text style={styles.value}>{addr.city}</Text>
+                  <Text style={styles.label}>Postal Code:</Text>
+                  <Text style={styles.value}>{addr.postalCode}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setLocationModalVisible(false)}
+              style={{ marginTop: 10 }}
+            >
+              <Text style={styles.modalClose}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.footer}>
         <Text style={styles.totalAmount}>₹{getTotal()}</Text>
-        <TouchableOpacity style={styles.payButton}>
-          <Text
-            style={styles.payText}
-            onPress={() => navigation.replace('CheckoutScreen')}
-          >
-            Pay ₹{getTotal()}
-          </Text>
+        <TouchableOpacity
+          style={styles.payButton}
+          onPress={() => navigation.replace("CheckoutScreen")}
+        >
+          <Text style={styles.payText}>Pay ₹{getTotal()}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -329,27 +368,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderColor: "#f0f0f0",
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
-  note: { fontSize: 14 },
-  link: { fontSize: 14, color: "#ffba00", fontWeight: "600" },
-  suggestionItem: {
-    width: 120,
-    paddingTop: 20,
-    backgroundColor: "#ffba00",
-    marginRight: 12,
-    alignItems: "center",
-    borderRadius: 10,
-  },
-  suggestionImg: {
-    width: 90,
-    height: 90,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  suggestionName: { fontSize: 13, textAlign: "center" },
-  suggestionPrice: { fontSize: 13, fontWeight: "600" },
+  note: { fontSize: 14, marginBottom: 8 },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",

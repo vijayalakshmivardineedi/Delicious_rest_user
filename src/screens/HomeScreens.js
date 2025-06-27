@@ -187,9 +187,7 @@ const HomeScreen = ({ navigation }) => {
             {categoriesList.map((category, index) => (
               <TouchableOpacity key={index} style={styles.categoryButton}>
                 <Image
-                  source={{
-                    uri: `${baseURL}/uploads/${category.image}`,
-                  }}
+                  source={{ uri: category.image }} // ✅ fixed here
                   style={styles.categoryImage}
                 />
                 <Text style={styles.categoryText}>{category.name}</Text>

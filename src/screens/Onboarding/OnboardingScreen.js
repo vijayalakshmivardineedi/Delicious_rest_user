@@ -74,7 +74,7 @@ const OnboardingScreen = ({ navigation }) => {
 
 
     const handleSendOTP = async () => {
-    await AsyncStorage.setItem("userId", JSON.stringify("4146"));
+    await AsyncStorage.setItem("userId", JSON.stringify("3138"));
 await AsyncStorage.setItem("token", JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNDYiLCJpYXQiOjE3NTAwOTM0MzgsImV4cCI6MTc1MDY5ODIzOH0.rAxyod7PBU5ACslC4RhkWPzPPhaGQ7Hi_acUglfc-MA"));
    navigation.replace("AppTabs"); 
   };

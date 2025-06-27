@@ -120,7 +120,7 @@ const MenuScreen = () => {
     return (
       <View style={styles.itemContainer} key={key}>
         <Image
-          source={{ uri: `http://192.168.29.186:2000/uploads/${item.image}` }}
+          source={{ uri: item.image }} // ✅ Use Cloudinary full URL
           style={styles.itemImage}
         />
         <View style={styles.itemInfo}>
