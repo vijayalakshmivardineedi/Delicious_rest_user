@@ -115,14 +115,13 @@ const MenuScreen = () => {
     );
   };
 
-  const renderItem = (item, key) => {
+  const renderItem = (item, categoryEnabled, key) => {
     const quantity = cartItems[item._id]?.quantity || 0;
+    const isDisabled = !categoryEnabled || !item.isEnabled;
+
     return (
-      <View style={styles.itemContainer} key={key}>
-        <Image
-          source={{ uri: item.image }} // ✅ Use Cloudinary full URL
-          style={styles.itemImage}
-        />
+      <View style={[styles.itemContainer, isDisabled && styles.disabledItem]} key={key}>
+        <Image source={{ uri: item.image }} style={styles.itemImage} />
         <View style={styles.itemInfo}>
           <View style={styles.itemHeader}>
             <View
@@ -143,7 +142,9 @@ const MenuScreen = () => {
           <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
           <Text style={styles.itemDesc}>{item.description || ""}</Text>
 
-          {quantity === 0 ? (
+          {isDisabled ? (
+            <Text style={{ color: "gray", marginTop: 6 }}>Not Available</Text>
+          ) : quantity === 0 ? (
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => addToCart(item)}
@@ -176,7 +177,7 @@ const MenuScreen = () => {
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
         {menuData.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.accordionSection}>
+          <View key={section._id} style={styles.accordionSection}>
             <TouchableOpacity
               style={styles.accordionHeader}
               onPress={() => toggleSection(section.name)}
@@ -189,7 +190,7 @@ const MenuScreen = () => {
 
             <Collapsible collapsed={!activeSections[section.name]}>
               {section.items.map((item, itemIndex) =>
-                renderItem(item, `${sectionIndex}-${itemIndex}`)
+                renderItem(item, section.isEnabled, `${section._id}-${item._id}`)
               )}
             </Collapsible>
           </View>
@@ -202,9 +203,7 @@ const MenuScreen = () => {
           onPress={() => navigation.navigate("Cart")}
         >
           <Text style={styles.cartText}>
-            {Object.keys(cartItems).length}{" "}
-            {Object.keys(cartItems).length === 1 ? "item" : "items"} | ₹
-            {getTotalPrice()}
+            {Object.keys(cartItems).length} item(s) | ₹{getTotalPrice()}
           </Text>
           <Text style={styles.viewCartText}>View Cart</Text>
         </TouchableOpacity>
@@ -336,6 +335,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#000",
+  },
+  disabledItem: {
+    opacity: 0.4,
   },
 });
 

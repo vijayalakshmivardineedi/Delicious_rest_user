@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import axiosInstance, { baseURL } from "../axios/healpers";
+import axiosInstance from "../axios/healpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -20,36 +20,34 @@ import { useFocusEffect } from "@react-navigation/native";
 const HomeScreen = ({ navigation }) => {
   const [isVeg, setIsVeg] = useState(false);
   const [categoriesList, setCategoriesList] = useState([]);
-  const [originalMenu, setOriginalMenu] = useState([]); // holds raw menu
-  const [menu, setMenu] = useState([]); // holds menu with quantities
+  const [originalMenu, setOriginalMenu] = useState([]);
+  const [menu, setMenu] = useState([]);
   const [cartItems, setCartItems] = useState({});
   const [loading, setLoading] = useState(true);
 
   const fetchMenu = async () => {
     try {
       const res = await axiosInstance.get(`/menu/getMenu`);
-      const allMenu = res?.data || []; // remove `.menu`
-      setOriginalMenu(allMenu); // Save full category list
+      const allMenu = res?.data || [];
+      setOriginalMenu(allMenu);
 
-      const formattedCategories = allMenu
-        .filter((cat) => cat.isEnabled !== false)
-        .map((cat) => ({
-          name: cat.name,
-          image: cat.cateimage,
-        }));
+      const formattedCategories = allMenu.map((cat) => ({
+        name: cat.name,
+        image: cat.cateimage,
+        isEnabled: cat.isEnabled,
+      }));
 
       setCategoriesList(formattedCategories);
 
-      // Optionally flatten all items into a list
-      const items = allMenu
-        .filter((cat) => cat.isEnabled !== false)
-        .flatMap((cat) =>
-          (cat.items || []).map((item) => ({
-            ...item,
-            itemCategory: cat.name,
-            itemType: cat.categoryType,
-          }))
-        );
+      const items = allMenu.flatMap((cat) =>
+        (cat.items || []).map((item) => ({
+          ...item,
+          itemCategory: cat.name,
+          itemType: cat.categoryType,
+          catEnabled: cat.isEnabled,
+        }))
+      );
+
       setOriginalMenu(items);
     } catch (err) {
       Alert.alert("Error", "No Categories Found");
@@ -139,15 +137,10 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     if (!loading && originalMenu.length > 0) {
-      console.log("Merging quantities...");
-      console.log("cartItems", cartItems);
-      console.log("originalMenu", originalMenu);
-
       const withQuantities = originalMenu.map((item) => ({
         ...item,
         quantity: cartItems[item._id]?.quantity || 0,
       }));
-
       setMenu(withQuantities);
     }
   }, [cartItems, loading, originalMenu]);
@@ -187,7 +180,7 @@ const HomeScreen = ({ navigation }) => {
             {categoriesList.map((category, index) => (
               <TouchableOpacity key={index} style={styles.categoryButton}>
                 <Image
-                  source={{ uri: category.image }} // ✅ fixed here
+                  source={{ uri: category.image }}
                   style={styles.categoryImage}
                 />
                 <Text style={styles.categoryText}>{category.name}</Text>
@@ -201,8 +194,8 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.itemsContainer}>
             {menu
               .filter((item) => (isVeg ? item.itemType === "Veg" : true))
-              .map((item, index) => (
-                <View key={index} style={styles.itemCard}>
+              .map((item) => (
+                <View key={item._id} style={styles.itemCard}>
                   <Image
                     source={{ uri: item.image }}
                     style={styles.itemImage}
@@ -212,14 +205,20 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
                     <Text style={styles.itemType}>{item.itemType}</Text>
                   </View>
+
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     {item.quantity > 0 && (
                       <>
-                        <TouchableOpacity onPress={() => removeFromCart(item)}>
+                        <TouchableOpacity
+                          onPress={() => removeFromCart(item)}
+                          disabled={!item.catEnabled || !item.isEnabled}
+                        >
                           <Ionicons
                             name="remove-circle"
                             size={30}
-                            color="red"
+                            color={
+                              item.catEnabled && item.isEnabled ? "red" : "#ccc"
+                            }
                           />
                         </TouchableOpacity>
                         <Text style={{ marginHorizontal: 8 }}>
@@ -227,8 +226,19 @@ const HomeScreen = ({ navigation }) => {
                         </Text>
                       </>
                     )}
-                    <TouchableOpacity onPress={() => addToCart(item)}>
-                      <Ionicons name="add-circle" size={30} color="#ffba00" />
+                    <TouchableOpacity
+                      onPress={() =>
+                        item.catEnabled && item.isEnabled && addToCart(item)
+                      }
+                      disabled={!item.catEnabled || !item.isEnabled}
+                    >
+                      <Ionicons
+                        name="add-circle"
+                        size={30}
+                        color={
+                          item.catEnabled && item.isEnabled ? "#ffba00" : "#ccc"
+                        }
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -255,46 +265,20 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#FFA500",
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  topSection: {
-    paddingBottom: 15,
-    paddingTop: 15,
-  },
-  bannerContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  bannerImage: {
-    width: "90%",
-    height: 180,
-    borderRadius: 8,
-  },
+  safeArea: { flex: 1, backgroundColor: "#FFA500" },
+  container: { flex: 1, backgroundColor: "#fff" },
+  topSection: { paddingBottom: 15, paddingTop: 15 },
+  bannerContainer: { alignItems: "center", marginBottom: 20 },
+  bannerImage: { width: "90%", height: 180, borderRadius: 8 },
   filterContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     justifyContent: "flex-end",
   },
-  filterText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginRight: 10,
-  },
-  section: {
-    margin: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
+  filterText: { fontSize: 16, fontWeight: "bold", marginRight: 10 },
+  section: { margin: 20 },
+  sectionTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
   categoryButton: {
     backgroundColor: "#ffba00",
     alignItems: "center",
@@ -303,20 +287,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: 120,
   },
-  categoryImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 10,
-  },
+  categoryImage: { width: 80, height: 80, borderRadius: 10 },
   categoryText: {
     fontSize: 14,
     marginTop: 5,
     fontWeight: "600",
     textAlign: "center",
   },
-  itemsContainer: {
-    flexDirection: "column",
-  },
+  itemsContainer: { flexDirection: "column" },
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -332,21 +310,10 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginRight: 10,
   },
-  itemDetails: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  itemPrice: {
-    fontSize: 14,
-    color: "#666",
-  },
-  itemType: {
-    fontSize: 12,
-    color: "green",
-  },
+  itemDetails: { flex: 1 },
+  itemName: { fontSize: 16, fontWeight: "bold" },
+  itemPrice: { fontSize: 14, color: "#666" },
+  itemType: { fontSize: 12, color: "green" },
   bottomBar: {
     backgroundColor: "#ffba00",
     height: 60,

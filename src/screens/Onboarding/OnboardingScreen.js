@@ -45,39 +45,39 @@ const OnboardingScreen = ({ navigation }) => {
 
   const handleGetStarted = () => setModalVisible(true);
 
-  // const handleSendOTP = async () => {
-  //   if (!phoneNumber || phoneNumber.length !== 10) {
-  //     Alert.alert("Invalid", "Please enter a valid 10-digit phone number");
-  //     return;
-  //   }
+  const handleSendOTP = async () => {
+    if (!phoneNumber || phoneNumber.length !== 10) {
+      Alert.alert("Invalid", "Please enter a valid 10-digit phone number");
+      return;
+    }
 
-  //   try {
-  //     const response = await fetch(`${baseURL}/send-otp`, {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ phone: phoneNumber }),
-  //     });
+    try {
+      const response = await fetch(`${baseURL}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: phoneNumber }),
+      });
 
-  //     const data = await response.json();
+      const data = await response.json();
 
-  //     if (response.ok) {
-  //       Alert.alert("Success", "OTP sent successfully");
-  //       navigation.replace("OTP Verification", { phoneNumber });
-  //     } else {
-  //       Alert.alert("Error", data.message || "Failed to send OTP");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error sending OTP:", error);
-  //     Alert.alert("Error", "Failed to send OTP. Please try again.");
-  //   }
-  // };
-
-
-    const handleSendOTP = async () => {
-    await AsyncStorage.setItem("userId", JSON.stringify("3138"));
-await AsyncStorage.setItem("token", JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNDYiLCJpYXQiOjE3NTAwOTM0MzgsImV4cCI6MTc1MDY5ODIzOH0.rAxyod7PBU5ACslC4RhkWPzPPhaGQ7Hi_acUglfc-MA"));
-   navigation.replace("AppTabs"); 
+      if (response.ok) {
+        Alert.alert("Success", "OTP sent successfully");
+        navigation.replace("OTP Verification", { phoneNumber });
+      } else {
+        Alert.alert("Error", data.message || "Failed to send OTP");
+      }
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      Alert.alert("Error", "Failed to send OTP. Please try again.");
+    }
   };
+
+
+//     const handleSendOTP = async () => {
+//     await AsyncStorage.setItem("userId", JSON.stringify("3138"));
+// await AsyncStorage.setItem("token", JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNDYiLCJpYXQiOjE3NTAwOTM0MzgsImV4cCI6MTc1MDY5ODIzOH0.rAxyod7PBU5ACslC4RhkWPzPPhaGQ7Hi_acUglfc-MA"));
+//    navigation.replace("AppTabs"); 
+//   };
 
   const handleCreateAccount = () => {
     navigation.replace("RegistrationScreen");
