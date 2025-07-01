@@ -157,7 +157,7 @@ const HomeScreen = ({ navigation }) => {
       <StatusBar backgroundColor="black" barStyle="dark-content" />
       <ScrollView style={styles.container}>
         <LinearGradient
-          colors={["#6d9773", "#e2e1cf"]}
+          colors={["#FFDBB5", "#FFF4E0"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.topSection}
@@ -178,7 +178,15 @@ const HomeScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Categories</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {categoriesList.map((category, index) => (
-              <TouchableOpacity key={index} style={styles.categoryButton}>
+              <TouchableOpacity
+                key={index}
+                style={styles.categoryButton}
+                onPress={() =>
+                  navigation.navigate("Menu", {
+                    selectedCategory: category.name,
+                  })
+                }
+              >
                 <Image
                   source={{ uri: category.image }}
                   style={styles.categoryImage}
@@ -217,7 +225,9 @@ const HomeScreen = ({ navigation }) => {
                             name="remove-circle"
                             size={30}
                             color={
-                              item.catEnabled && item.isEnabled ? "red" : "#ccc"
+                              item.catEnabled && item.isEnabled
+                                ? "red"
+                                : "#ccc"
                             }
                           />
                         </TouchableOpacity>
@@ -236,7 +246,9 @@ const HomeScreen = ({ navigation }) => {
                         name="add-circle"
                         size={30}
                         color={
-                          item.catEnabled && item.isEnabled ? "#ffba00" : "#ccc"
+                          item.catEnabled && item.isEnabled
+                            ? "#ffba00"
+                            : "#ccc"
                         }
                       />
                     </TouchableOpacity>

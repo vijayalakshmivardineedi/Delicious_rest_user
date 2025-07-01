@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderRadius: 8,
-    backgroundColor: '#FFEAC5',
+    backgroundColor: '#FFF4E0',
     marginBottom: 10,
   },
   code: { fontWeight: 'bold', fontSize: 18, color: "#6d9773", marginBottom: 4 },

@@ -9,7 +9,11 @@ import {
   Alert,
 } from "react-native";
 import Collapsible from "react-native-collapsible";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axiosInstance from "../axios/healpers";
 
@@ -18,6 +22,7 @@ const MenuScreen = () => {
   const [activeSections, setActiveSections] = useState({});
   const [cartItems, setCartItems] = useState({});
   const navigation = useNavigation();
+  const route = useRoute();
 
   const fetchMenu = async () => {
     try {
@@ -54,7 +59,17 @@ const MenuScreen = () => {
     useCallback(() => {
       fetchMenu();
       fetchCart();
-    }, [])
+
+      if (route.params?.selectedCategory) {
+        setActiveSections((prev) => ({
+          ...prev,
+          [route.params.selectedCategory]: true,
+        }));
+
+        // Optional: reset param
+        navigation.setParams({ selectedCategory: null });
+      }
+    }, [route.params?.selectedCategory])
   );
 
   const toggleSection = (category) => {
@@ -120,7 +135,10 @@ const MenuScreen = () => {
     const isDisabled = !categoryEnabled || !item.isEnabled;
 
     return (
-      <View style={[styles.itemContainer, isDisabled && styles.disabledItem]} key={key}>
+      <View
+        style={[styles.itemContainer, isDisabled && styles.disabledItem]}
+        key={key}
+      >
         <Image source={{ uri: item.image }} style={styles.itemImage} />
         <View style={styles.itemInfo}>
           <View style={styles.itemHeader}>
@@ -190,7 +208,11 @@ const MenuScreen = () => {
 
             <Collapsible collapsed={!activeSections[section.name]}>
               {section.items.map((item, itemIndex) =>
-                renderItem(item, section.isEnabled, `${section._id}-${item._id}`)
+                renderItem(
+                  item,
+                  section.isEnabled,
+                  `${section._id}-${item._id}`
+                )
               )}
             </Collapsible>
           </View>

@@ -348,7 +348,15 @@ const CartScreen = () => {
         <Text style={styles.totalAmount}>₹{getTotal()}</Text>
         <TouchableOpacity
           style={styles.payButton}
-          onPress={() => navigation.replace("CheckoutScreen")}
+          onPress={() =>
+            navigation.navigate("CheckoutScreen", {
+              cartItems,
+              totalAmount: getTotal(),
+              cookingRequest,
+              selectedAddress,
+              appliedCoupon,
+            })
+          }
         >
           <Text style={styles.payText}>Pay ₹{getTotal()}</Text>
         </TouchableOpacity>

@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
   item: {
     paddingVertical: 16,
-    backgroundColor: "#6d9773",
+    backgroundColor: "#FFF4E0",
     marginBottom: 20,
     borderRadius: 10,
   },
@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     paddingLeft: 20,
     fontSize: 16,
     fontWeight: '500',
-    color: "white"
+    color: "black"
   }
 });
 

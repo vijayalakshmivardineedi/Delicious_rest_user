@@ -9,8 +9,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import Swiper from "react-native-swiper";
-import { LinearGradient } from "expo-linear-gradient";
+import SwiperFlatList from "react-native-swiper-flatlist";
 import Modal from "react-native-modal";
 import { baseURL } from "../../axios/healpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -39,7 +38,7 @@ const OnboardingScreen = ({ navigation }) => {
       title: "Fast Delivery",
       description:
         "Get your food delivered hot and fresh, right to your doorstep.",
-      image: require("../../assets/splash.png"),
+      image: require("../../assets/delivery.png"),
     },
   ];
 
@@ -72,37 +71,25 @@ const OnboardingScreen = ({ navigation }) => {
     }
   };
 
-
-//     const handleSendOTP = async () => {
-//     await AsyncStorage.setItem("userId", JSON.stringify("3138"));
-// await AsyncStorage.setItem("token", JSON.stringify("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQxNDYiLCJpYXQiOjE3NTAwOTM0MzgsImV4cCI6MTc1MDY5ODIzOH0.rAxyod7PBU5ACslC4RhkWPzPPhaGQ7Hi_acUglfc-MA"));
-//    navigation.replace("AppTabs"); 
-//   };
-
   const handleCreateAccount = () => {
     navigation.replace("RegistrationScreen");
   };
 
   return (
     <View style={styles.container}>
-      <Swiper
+      <SwiperFlatList
         autoplay
-        autoplayTimeout={3}
-        showsPagination
-        dotStyle={styles.dotStyle}
-        activeDotStyle={styles.activeDotStyle}
-        loop={false}
+        autoplayDelay={3}
+        showPagination
+        paginationStyle={styles.pagination}
+        paginationStyleItem={styles.dotStyle}
+        paginationActiveColor="#ffba00"
+        paginationDefaultColor="#ccc"
       >
         {slides.map((slide, index) => (
           <View key={slide.id} style={styles.slide}>
-            <ImageBackground
-              source={slide.image}
-              style={styles.backgroundImage}
-            >
-              <LinearGradient
-                colors={["rgba(226, 225, 207, 0.3)", "rgba(191, 187, 149, 0.5)"]}
-                style={styles.overlay}
-              />
+            <ImageBackground source={slide.image} style={styles.backgroundImage}>
+              <View style={styles.blackOverlay} />
               <View style={styles.textContainer}>
                 <Text style={styles.title}>{slide.title}</Text>
                 <Text style={styles.description}>{slide.description}</Text>
@@ -118,7 +105,7 @@ const OnboardingScreen = ({ navigation }) => {
             </ImageBackground>
           </View>
         ))}
-      </Swiper>
+      </SwiperFlatList>
 
       <Modal
         isVisible={isModalVisible}
@@ -127,7 +114,9 @@ const OnboardingScreen = ({ navigation }) => {
         style={styles.modal}
       >
         <View style={styles.modalContent}>
-          <Text style={styles.welcomeText}>Welcome to Delicious Biryani's</Text>
+          <Text style={styles.welcomeText}>
+            Welcome to Bhimavaram Delicious Biryani's
+          </Text>
           <Text style={styles.loginPrompt}>Login with your phone number</Text>
           <TextInput
             style={styles.input}
@@ -155,7 +144,7 @@ const OnboardingScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  slide: { flex: 1 },
+  slide: { width, height },
   backgroundImage: {
     flex: 1,
     width: "100%",
@@ -163,7 +152,10 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
     position: "absolute",
   },
-  overlay: { ...StyleSheet.absoluteFillObject },
+  blackOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
   textContainer: {
     position: "absolute",
     bottom: 100,
@@ -194,19 +186,12 @@ const styles = StyleSheet.create({
     bottom: 40,
   },
   buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  pagination: { position: "absolute", bottom: 10 },
   dotStyle: {
-    backgroundColor: "#ccc",
+    marginHorizontal: 5,
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginHorizontal: 3,
-  },
-  activeDotStyle: {
-    backgroundColor: "#ffba00",
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginHorizontal: 3,
   },
   modal: { justifyContent: "flex-end", margin: 0 },
   modalContent: {
@@ -236,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  loginButtonText: { color: "#3B271C", fontSize: 16, fontWeight: "700" },
+  loginButtonText: { color: "white", fontSize: 16, fontWeight: "700" },
   registerContainer: {
     flexDirection: "row",
     justifyContent: "center",

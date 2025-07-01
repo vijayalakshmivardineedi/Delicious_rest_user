@@ -1,14 +1,49 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Image,
+} from "react-native";
+import axiosInstance from "../../axios/healpers";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const TrackOrderScreen = ({ navigation }) => {
-  const deliveryLocation = {
-    latitude: 17.385044, // Example: Hyderabad
-    longitude: 78.486671,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  };
+  const [latestOrder, setLatestOrder] = useState(null);
+
+  useEffect(() => {
+    const fetchLatestOrder = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userId");
+        const userId = JSON.parse(raw);
+        const token = await AsyncStorage.getItem("token");
+
+        const res = await axiosInstance.get(`/order/getOrderByUserId/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const orders = res.data;
+        if (!orders || orders.length === 0) {
+          Alert.alert("No orders", "You haven't placed any orders yet.");
+          return;
+        }
+
+        const latest = orders[orders.length - 1]; // Assuming last is latest
+        setLatestOrder(latest);
+      } catch (error) {
+        console.error("Fetch order error:", error?.response?.data || error.message);
+        Alert.alert("Error", "Failed to fetch order.");
+      }
+    };
+
+    fetchLatestOrder();
+  }, []);
+
+  const itemsText = latestOrder?.items
+    ?.map((item) => `${item.quantity}x ${item.name}`)
+    .join("\n");
 
   return (
     <View style={styles.container}>
@@ -19,25 +54,23 @@ const TrackOrderScreen = ({ navigation }) => {
         </View>
       </View>
 
-      {/* Map View Integration */}
-      <View style={styles.mapWrapper}>
-        <MapView style={styles.map} initialRegion={deliveryLocation}>
-          <Marker
-            coordinate={deliveryLocation}
-            title="Delivery Partner"
-            description="2.1 km away"
-          />
-        </MapView>
+      {/* 🖼️ Replaced Map with Image */}
+      <View style={styles.imageWrapper}>
+        <Image
+          source={require("../../assets/notification.jpg")}
+          style={styles.image}
+          resizeMode="cover"
+        />
       </View>
 
       <View style={styles.infoCard}>
         <Text style={styles.label}>Order ID</Text>
-        <Text style={styles.value}>#ORD123456</Text>
+        <Text style={styles.value}>
+          #{latestOrder?.orderId || "Fetching..."}
+        </Text>
 
         <Text style={styles.label}>Items</Text>
-        <Text style={styles.value}>
-          1x Chicken Biryani{"\n"}2x Butter Naan{"\n"}1x Paneer Tikka
-        </Text>
+        <Text style={styles.value}>{itemsText || "Loading items..."}</Text>
 
         <Text style={styles.label}>Delivery Partner</Text>
         <Text style={styles.value}>Rajesh (2.1 km away)</Text>
@@ -84,15 +117,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 20,
   },
-  mapWrapper: {
+  imageWrapper: {
     width: "100%",
     height: 250,
   },
-  map: {
-    ...StyleSheet.absoluteFillObject,
+  image: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 10,
   },
   infoCard: {
-    backgroundColor: "#FFEAC5",
+    backgroundColor: "#FFF4E0",
     width: "90%",
     borderRadius: 10,
     padding: 16,

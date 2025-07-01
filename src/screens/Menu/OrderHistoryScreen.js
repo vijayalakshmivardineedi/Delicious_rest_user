@@ -1,63 +1,93 @@
-import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  Alert,
+  SafeAreaView,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axiosInstance from '../../axios/healpers';
 
-const orders = [
-  {
-    id: '1',
-    items: 'Veg Burger, Coke',
-    dateTime: 'Apr 20 • 7:30 PM',
-    status: 'Delivered',
-  },
-  {
-    id: '2',
-    items: 'Zinger Burger, Fries',
-    dateTime: 'Apr 17 • 6:15 PM',
-    status: 'Out for delivery',
-  },
-  {
-    id: '3',
-    items: 'Veg Burger, Coke',
-    dateTime: 'Apr 20 • 7:30 PM',
-    status: 'Delivered',
-  },
-  {
-    id: '4',
-    items: 'Zinger Burger, Fries',
-    dateTime: 'Apr 17 • 6:15 PM',
-    status: 'Out for delivery',
-  },
-  {
-    id: '5',
-    items: 'Veg Burger, Coke',
-    dateTime: 'Apr 20 • 7:30 PM',
-    status: 'Delivered',
-  },
-  {
-    id: '6',
-    items: 'Zinger Burger, Fries',
-    dateTime: 'Apr 17 • 6:15 PM',
-    status: 'Out for delivery',
-  },
-];
+const OrderHistoryScreen = () => {
+  const [orders, setOrders] = useState([]);
 
-const OrderHistoryScreen = () => (
-  <View style={styles.container}>
-    <Text style={styles.header}>Order History</Text>
-    <FlatList
-      data={orders}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <View style={styles.orderCard}>
-          <View style={styles.cardTop}>
-            <Text style={styles.items}>{item.items}</Text>
-            <Text style={styles.dateTime}>{item.dateTime}</Text>
+  const fetchOrders = async () => {
+    try {
+      const userId = await AsyncStorage.getItem('userId');
+      const parsedUserId = JSON.parse(userId);
+
+      const response = await axiosInstance.get(
+        `/order/getOrderByUserId/${parsedUserId}`
+      );
+
+      if (response.status === 200) {
+        setOrders(response.data);
+      } else {
+        Alert.alert('No Orders', 'No order history found.');
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      Alert.alert('Error', 'Failed to fetch order history.');
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 30000); // refresh every 30 seconds
+
+    return () => clearInterval(interval); // cleanup on unmount
+  }, []);
+
+  const formatDateTime = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const formattedDate = date.toLocaleDateString();
+    const formattedTime = date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${formattedDate} • ${formattedTime}`;
+  };
+
+  const renderItems = (items) => (
+    <View style={{ marginTop: 4 }}>
+      {items.map((item, index) => (
+        <Text key={index} style={styles.itemLine}>
+          • {item.name} x{item.quantity}
+        </Text>
+      ))}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.header}>Order History</Text>
+      <FlatList
+        data={orders}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <View style={styles.orderCard}>
+            <View style={styles.cardTop}>
+              <View style={{ flex: 1 }}>{renderItems(item.items)}</View>
+              <Text style={styles.dateTime}>{formatDateTime(item.createdAt)}</Text>
+            </View>
+            <Text style={styles.status}>{item.status}</Text>
           </View>
-          <Text style={styles.status}>{item.status}</Text>
-        </View>
-      )}
-    />
-  </View>
-);
+        )}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', marginTop: 20, fontSize: 16 }}>
+            No orders found.
+          </Text>
+        }
+      />
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: '#fff' },
@@ -66,7 +96,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
-    backgroundColor: '#6d9773',
+    backgroundColor: '#FFF4E0',
     borderRadius: 8,
     marginBottom: 12,
   },
@@ -75,9 +105,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  items: { fontSize: 16, fontWeight: '600', flex: 1 },
-  dateTime: { fontSize: 14, color: 'white', textAlign: 'right' },
-  status: { fontSize: 14, color: '#ffba00', fontWeight: '700', },
+  itemLine: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  dateTime: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'right',
+    marginLeft: 10,
+    maxWidth: 100,
+  },
+  status: {
+    fontSize: 14,
+    color: '#ffba00',
+    fontWeight: '700',
+    marginTop: 6,
+  },
 });
 
 export default OrderHistoryScreen;

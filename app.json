@@ -1,19 +1,41 @@
 {
   "expo": {
-    "name": "Restaurant App",
+    "name": "DeliciousRestUser",
     "slug": "restaurant-app",
     "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/delicious.png",
+    "userInterfaceStyle": "light",
     "splash": {
-      "image": "./src/assets/splash1.png",
-      "backgroundColor": "#000000",
-      "resizeMode": "cover"
+      "image": "./src/assets/delicious.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#ffffff"
     },
     "android": {
-      "newArchEnabled": true,
-      "package": "com.anonymous.restaurantapp"
+      "package": "com.yourcompany.delicioususer",
+      "versionCode": 1,
+      "splash": {
+        "image": "./src/assets/delicious.png",
+        "resizeMode": "cover",
+        "backgroundColor": "#ffffff"
+      }
     },
-    "ios": {
-      "newArchEnabled": true
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./src/assets/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "088fb20e-b32d-4d18-82e5-230ad30a9c5e"
+      }
     }
   }
 }
