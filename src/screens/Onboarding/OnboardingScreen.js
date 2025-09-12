@@ -8,11 +8,16 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import SwiperFlatList from "react-native-swiper-flatlist";
 import Modal from "react-native-modal";
 import { baseURL } from "../../axios/healpers";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import get1 from "../../assets/get1.jpg";
+import splash from "../../assets/splash.png";
+import delivery from "../../assets/delivery.png";
 
 const { width, height } = Dimensions.get("window");
 
@@ -25,20 +30,20 @@ const OnboardingScreen = ({ navigation }) => {
       id: 1,
       title: "Discover Restaurants",
       description: "Explore the best cuisines from your favorite restaurants.",
-      image: require("../../assets/get1.jpg"),
+      image: get1,
     },
     {
       id: 2,
       title: "Quick & Easy Ordering",
       description: "Order your favorite dishes in just a few clicks.",
-      image: require("../../assets/splash.png"),
+      image: splash,
     },
     {
       id: 3,
       title: "Fast Delivery",
       description:
         "Get your food delivered hot and fresh, right to your doorstep.",
-      image: require("../../assets/delivery.png"),
+      image: delivery,
     },
   ];
 
@@ -51,7 +56,7 @@ const OnboardingScreen = ({ navigation }) => {
     }
 
     try {
-      const response = await fetch(`${baseURL}/send-otp`, {
+      const response = await fetch(`${baseURL}/sendLoginOTP`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: phoneNumber }),
@@ -88,60 +93,85 @@ const OnboardingScreen = ({ navigation }) => {
       >
         {slides.map((slide, index) => (
           <View key={slide.id} style={styles.slide}>
-            <ImageBackground source={slide.image} style={styles.backgroundImage}>
+            <ImageBackground
+              source={slide.image}
+              style={styles.backgroundImage}
+            >
               <View style={styles.blackOverlay} />
-              <View style={styles.textContainer}>
-                <Text style={styles.title}>{slide.title}</Text>
-                <Text style={styles.description}>{slide.description}</Text>
+
+              <View style={styles.contentContainer}>
+                <View style={styles.textContainer}>
+                  <Text style={styles.title}>{slide.title}</Text>
+                  <Text style={styles.description}>{slide.description}</Text>
+                </View>
+
+                {index === slides.length - 1 && (
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={handleGetStarted}
+                  >
+                    <Text style={styles.buttonText}>Get Started</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              {index === slides.length - 1 && (
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={handleGetStarted}
-                >
-                  <Text style={styles.buttonText}>Get Started</Text>
-                </TouchableOpacity>
-              )}
             </ImageBackground>
           </View>
         ))}
       </SwiperFlatList>
 
+      {/* Login Modal */}
       <Modal
         isVisible={isModalVisible}
         onBackdropPress={() => setModalVisible(false)}
         onBackButtonPress={() => setModalVisible(false)}
         style={styles.modal}
       >
-        <View style={styles.modalContent}>
-          <Text style={styles.welcomeText}>
-            Welcome to Bhimavaram Delicious Biryani's
-          </Text>
-          <Text style={styles.loginPrompt}>Login with your phone number</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            placeholder="Enter phone number"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            maxLength={10}
-          />
-          <TouchableOpacity style={styles.loginButton} onPress={handleSendOTP}>
-            <Text style={styles.loginButtonText}>Continue</Text>
-          </TouchableOpacity>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <ScrollView
+            contentContainerStyle={styles.modalScroll}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.welcomeText}>
+                Welcome to Bhimavaram Delicious Biryani's
+              </Text>
+              <Text style={styles.loginPrompt}>
+                Login with your phone number
+              </Text>
 
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={handleCreateAccount}>
-              <Text style={styles.registerLink}>Register</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              <TextInput
+                style={styles.input}
+                keyboardType="number-pad"
+                placeholder="Enter phone number"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                maxLength={10}
+              />
+
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleSendOTP}
+              >
+                <Text style={styles.loginButtonText}>Continue</Text>
+              </TouchableOpacity>
+
+              <View style={styles.registerContainer}>
+                <Text style={styles.registerText}>Don't have an account? </Text>
+                <TouchableOpacity onPress={handleCreateAccount}>
+                  <Text style={styles.registerLink}>Register</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
 };
 
+// Styles
 const styles = StyleSheet.create({
   container: { flex: 1 },
   slide: { width, height },
@@ -150,57 +180,62 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     resizeMode: "cover",
-    position: "absolute",
   },
   blackOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
+
+  /** Auto layout content */
+  contentContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+    padding: 20,
+  },
   textContainer: {
-    position: "absolute",
-    bottom: 100,
-    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 50,
+    fontSize: 32,
     fontWeight: "900",
     color: "#fff",
-    marginBottom: 5,
+    marginBottom: 8,
+    flexWrap: "wrap",
   },
   description: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "500",
     color: "#fff",
-    lineHeight: 30,
-    marginBottom: 30,
+    lineHeight: 22,
+    marginBottom: 20,
+    flexWrap: "wrap",
   },
   button: {
     backgroundColor: "#ffba00",
-    paddingVertical: 15,
-    paddingHorizontal: 30,
+    paddingVertical: 14,
     borderRadius: 25,
-    width: "90%",
+    width: "100%",
     alignItems: "center",
-    alignSelf: "center",
-    position: "absolute",
-    bottom: 40,
   },
   buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
   pagination: { position: "absolute", bottom: 10 },
-  dotStyle: {
-    marginHorizontal: 5,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
+  dotStyle: { marginHorizontal: 5, width: 8, height: 8, borderRadius: 4 },
+
+  /** Modal Styles */
   modal: { justifyContent: "flex-end", margin: 0 },
+  modalScroll: { flexGrow: 1, justifyContent: "flex-end" },
   modalContent: {
     backgroundColor: "#fff",
     padding: 25,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  welcomeText: { fontSize: 22, fontWeight: "700", textAlign: "center" },
+  welcomeText: {
+    fontSize: 22,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
+  },
   loginPrompt: {
     textAlign: "center",
     fontSize: 16,
@@ -226,6 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 16,
+    flexWrap: "wrap",
   },
   registerText: { fontSize: 14, color: "#555" },
   registerLink: { fontSize: 14, color: "#ffba00", fontWeight: "bold" },

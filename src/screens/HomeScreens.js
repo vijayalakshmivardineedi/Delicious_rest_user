@@ -66,7 +66,10 @@ const HomeScreen = ({ navigation }) => {
   const myMenu = async () => {
     try {
       const raw = await AsyncStorage.getItem("userId");
-      const userId = parseInt(JSON.parse(raw), 10);
+      const userId = raw ? parseInt(JSON.parse(raw), 10) : null;
+      if (!userId || Number.isNaN(userId)) {
+        return;
+      }
       const response = await axiosInstance.get(`/cart/getCart/${userId}`);
       if (response.status === 200) {
         const cartArray = response.data.items || [];
@@ -225,9 +228,7 @@ const HomeScreen = ({ navigation }) => {
                             name="remove-circle"
                             size={30}
                             color={
-                              item.catEnabled && item.isEnabled
-                                ? "red"
-                                : "#ccc"
+                              item.catEnabled && item.isEnabled ? "red" : "#ccc"
                             }
                           />
                         </TouchableOpacity>
@@ -246,9 +247,7 @@ const HomeScreen = ({ navigation }) => {
                         name="add-circle"
                         size={30}
                         color={
-                          item.catEnabled && item.isEnabled
-                            ? "#ffba00"
-                            : "#ccc"
+                          item.catEnabled && item.isEnabled ? "#ffba00" : "#ccc"
                         }
                       />
                     </TouchableOpacity>
@@ -297,7 +296,7 @@ const styles = StyleSheet.create({
     marginRight: 15,
     padding: 10,
     borderRadius: 12,
-    width: 120,
+    width: 110,
   },
   categoryImage: { width: 80, height: 80, borderRadius: 10 },
   categoryText: {

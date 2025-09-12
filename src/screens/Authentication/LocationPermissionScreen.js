@@ -11,11 +11,11 @@ import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Linking, Platform } from "react-native";
 
-
 const LocationPermissionScreen = ({ navigation, route }) => {
   const { userId: routeUserId, token: routeToken } = route.params || {};
 
-  const handleLocationAccess = async () => {s
+  const handleLocationAccess = async () => {
+    s;
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -33,8 +33,8 @@ const LocationPermissionScreen = ({ navigation, route }) => {
       const formattedAddress = `${place.name || ""}, ${place.city || ""}`;
 
       // Get userId and token from route or AsyncStorage
-      const userId =  routeUserId  || await AsyncStorage.getItem("userId");;
-      const token = routeToken || await AsyncStorage.getItem("token");
+      const userId = routeUserId || (await AsyncStorage.getItem("userId"));
+      const token = routeToken || (await AsyncStorage.getItem("token"));
 
       if (!userId || !token) {
         Alert.alert(
@@ -59,8 +59,8 @@ const LocationPermissionScreen = ({ navigation, route }) => {
   };
 
   const handleManualLocation = async () => {
-const userId =  routeUserId  || await AsyncStorage.getItem("userId");
-      const token = routeToken || await AsyncStorage.getItem("token");
+    const userId = routeUserId || (await AsyncStorage.getItem("userId"));
+    const token = routeToken || (await AsyncStorage.getItem("token"));
     if (!userId || !token) {
       Alert.alert(
         "Error",
@@ -84,39 +84,38 @@ const userId =  routeUserId  || await AsyncStorage.getItem("userId");
         We need your location to show available restaurants & products
       </Text>
 
-<TouchableOpacity
-  style={styles.primaryButton}
-  onPress={() => {
-    Alert.alert(
-      "Location Access",
-      "This app needs your location to show nearby restaurants and products. Do you want to allow location access?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Open Settings",
-          onPress: async () => {
-            // Try to request permission again first
-            const { status } = await Location.requestForegroundPermissionsAsync();
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => {
+          Alert.alert(
+            "Location Access",
+            "This app needs your location to show nearby restaurants and products. Do you want to allow location access?",
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+              {
+                text: "Open Settings",
+                onPress: async () => {
+                  // Try to request permission again first
+                  const { status } =
+                    await Location.requestForegroundPermissionsAsync();
 
-            if (status === "granted") {
-              handleLocationAccess();
-            } else {
-              // If still not granted, open settings
-              Linking.openSettings(); // Opens app settings
-            }
-          },
-        },
-      ]
-    );
-  }}
->
-  <Text style={styles.primaryButtonText}>Allow location access</Text>
-</TouchableOpacity>
-
-
+                  if (status === "granted") {
+                    handleLocationAccess();
+                  } else {
+                    // If still not granted, open settings
+                    Linking.openSettings(); // Opens app settings
+                  }
+                },
+              },
+            ]
+          );
+        }}
+      >
+        <Text style={styles.primaryButtonText}>Allow location access</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity onPress={handleManualLocation}>
         <Text style={styles.secondaryText}>Enter location manually</Text>

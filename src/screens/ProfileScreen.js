@@ -114,7 +114,7 @@ const ProfileScreen = ({ navigation }) => {
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() =>
-          Alert.alert("Help Center", "Email us at help@example.com")
+          Alert.alert("Help Center", "Email us at delicious50biryanis@gmail.com")
         }
       >
         <Ionicons

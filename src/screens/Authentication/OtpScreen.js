@@ -24,37 +24,37 @@ const OtpScreen = ({ route, navigation }) => {
   const [showBottomSheet, setShowBottomSheet] = useState(false);
 
   const handleVerifyOtp = async () => {
-  const enteredOtp = otp.join("");
+    const enteredOtp = otp.join("");
 
-  if (enteredOtp.length !== 6) {
-    alert("Please enter the full 6-digit OTP.");
-    return;
-  }
-
-  const formData={phone: phoneNumber,
-        otp: enteredOtp,}
-  try {
-    const response = await axiosInstance.post(`/login`, formData);
-
-    const data = await response?.data;
-
-    if (response.status === 200) {
-            await AsyncStorage.setItem("userId", JSON.stringify(data.userId));
-await AsyncStorage.setItem("token", JSON.stringify(data.token));
-   navigation.replace("AppTabs"); 
-    } else {
-
-         if (data.message === "User not found, please register first") {
-        setShowBottomSheet(true);
-      } else {
-        Alert.alert("OTP Error", data.message || "Verification failed");
-      }
+    if (enteredOtp.length !== 6) {
+      alert("Please enter the full 6-digit OTP.");
+      return;
     }
-  } catch (err) {
-    console.error("Login Error:", err);
-    Alert.alert("Network Error", "Please try again later.");
-  }
-};
+
+    const formData = { phone: phoneNumber, otp: enteredOtp };
+    try {
+      const response = await axiosInstance.post(`/login`, formData);
+
+      const data = await response?.data;
+
+      if (response.status === 200) {
+        await AsyncStorage.setItem("userId", JSON.stringify(data.userId?.userId));
+        await AsyncStorage.setItem("token", JSON.stringify(data.token));
+        await AsyncStorage.setItem("name", JSON.stringify(data.userId?.name));
+        await AsyncStorage.setItem("phone", JSON.stringify(data.userId?.phone));
+        navigation.replace("AppTabs");
+      } else {
+        if (data.message === "User not found, please register first") {
+          setShowBottomSheet(true);
+        } else {
+          Alert.alert("OTP Error", data.message || "Verification failed");
+        }
+      }
+    } catch (err) {
+      console.error("Login Error:", err);
+      Alert.alert("Network Error", "Please try again later.");
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -93,8 +93,6 @@ await AsyncStorage.setItem("token", JSON.stringify(data.token));
       style={styles.container}
       behavior={Platform.select({ ios: "padding", android: null })}
     >
-      
-
       <Text style={styles.heading}>Verify with OTP sent to</Text>
       <Text style={styles.phone}>{phoneNumber}</Text>
 
@@ -120,16 +118,12 @@ await AsyncStorage.setItem("token", JSON.stringify(data.token));
         <Text style={styles.continueText}>Continue</Text>
       </TouchableOpacity>
 
-     <Text style={styles.resendText}>
-  Didn't receive it?{" "}
-  <Text
-    onPress={handleResendOtp}
-    style={styles.resendLink}
-  >
-    Retry
-  </Text>
-</Text>
-
+      <Text style={styles.resendText}>
+        Didn't receive it?{" "}
+        <Text onPress={handleResendOtp} style={styles.resendLink}>
+          Retry
+        </Text>
+      </Text>
 
       {/* Bottom Sheet Modal */}
       <Modal
@@ -146,7 +140,10 @@ await AsyncStorage.setItem("token", JSON.stringify(data.token));
             Do you want to create a new one?
           </Text>
 
-          <TouchableOpacity style={styles.createBtn} onPress={handleCreateAccount}>
+          <TouchableOpacity
+            style={styles.createBtn}
+            onPress={handleCreateAccount}
+          >
             <Text style={styles.createBtnText}>Create Account</Text>
           </TouchableOpacity>
         </View>

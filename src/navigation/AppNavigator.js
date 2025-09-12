@@ -1,8 +1,16 @@
-import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import React, { useState } from "react";
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+} from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from "@expo/vector-icons"; // For tab icons and header icons
+import { Ionicons } from "@expo/vector-icons";
+import { useColorScheme } from "react-native";
+import { LightTheme, CustomDarkTheme } from "../../src/navigation/theme";
+
+// your screens...
 import HomeScreen from "../screens/HomeScreens";
 import MenuScreen from "../screens/MenuScreen";
 import CartScreen from "../screens/CartScreen";
@@ -26,88 +34,72 @@ import EditProfileScreen from "../screens/Menu/EditProfileScreen";
 import SavedAddressesScreen from "../screens/Menu/SavedAddressesScreen";
 import RatingReviewScreen from "../screens/Menu/RatingReviewScreen";
 import CheckoutScreen from "../screens/Menu/CheckoutScreen";
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
 const AppNavigator = () => {
+  const scheme = useColorScheme(); // ✅ auto detects system dark/light
+
   const TabNavigator = () => {
     return (
       <Tab.Navigator
         initialRouteName="Home"
-        screenOptions={{
+        screenOptions={({ navigation }) => ({
           tabBarActiveTintColor: "#ffba00",
-          tabBarInactiveTintColor: "white",
+          tabBarInactiveTintColor: scheme === "dark" ? "#aaa" : "white",
           tabBarStyle: {
             height: 70,
             borderTopLeftRadius: 50,
             borderTopRightRadius: 50,
-            backgroundColor: "#0c3b2e",
-            paddingTop: "8",
+            backgroundColor: scheme === "dark" ? "#1c1c1c" : "#0c3b2e",
             position: "absolute",
             overflow: "hidden",
           },
-        }}
+          headerStyle: {
+            backgroundColor: scheme === "dark" ? "#000" : "#fff",
+          },
+          headerTitleStyle: {
+            color: scheme === "dark" ? "#fff" : "#000",
+            fontWeight: "bold",
+            fontSize: 20,
+          },
+          headerRight: () => (
+            <Ionicons
+              name="cart"
+              size={24}
+              color={scheme === "dark" ? "#fff" : "#000"}
+              style={{ marginRight: 15 }}
+              onPress={() => navigation.navigate("Cart")}
+            />
+          ),
+        })}
       >
         <Tab.Screen
           name="Home"
           component={HomeScreen}
-          options={({ navigation }) => ({
-            tabBarLabel: "Home",
-            title: "Bhimavaram Delicious Biryanis", // Custom header title
-            headerTitleStyle: {
-              color: "#ffba00", // ✅ Set header text color
-              fontWeight: "bold", // Optional: make it bold
-              fontSize: 22, // Optional: adjust font size
-            },
+          options={{
+            title: "Home", 
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home" size={size} color={color} />
             ),
-            headerRight: () => (
-              <Ionicons
-                name="cart"
-                size={24}
-                color="#000"
-                style={{ marginRight: 15 }}
-                onPress={() => navigation.navigate("Cart")}
-              />
-            ),
-          })}
+          }}
         />
-
         <Tab.Screen
           name="Menu"
           component={MenuScreen}
-         options={({ navigation }) => ({
-            tabBarLabel: "Menu",
+          options={{
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="list" size={size} color={color} />
             ),
-            headerRight: () => (
-              <Ionicons
-                name="cart"
-                size={24}
-                color="#000"
-                style={{ marginRight: 15 }}
-                onPress={() => navigation.navigate("Cart")}
-              />
-            ),
-          })}
+          }}
         />
         <Tab.Screen
           name="Profile"
           component={ProfileScreen}
           options={{
-            tabBarLabel: "Profile",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
-            ),
-            headerRight: () => (
-              <Ionicons
-                name="cart"
-                size={24}
-                color="#000"
-                style={{ marginRight: 15 }}
-                onPress={() => navigation.navigate("Cart")}
-              />
             ),
           }}
         />
@@ -116,7 +108,9 @@ const AppNavigator = () => {
   };
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      theme={scheme === "dark" ? CustomDarkTheme : LightTheme}
+    >
       <Stack.Navigator initialRouteName="Onboard">
         <Stack.Screen
           name="Onboard"
@@ -182,4 +176,5 @@ const AppNavigator = () => {
     </NavigationContainer>
   );
 };
+
 export default AppNavigator;

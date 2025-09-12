@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 
 const SettingsScreen = () => {
   const handleSupport = () => {
-    Alert.alert("Help Center", "Contact support at support@example.com");
+    Alert.alert("Help Center", "Contact support at delicious50biryanis@gmail.com");
   };
 
   return (

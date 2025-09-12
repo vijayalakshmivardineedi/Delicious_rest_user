@@ -87,7 +87,6 @@ const handleSubmit = async () => {
       Alert.alert("Success", "Location saved successfully.");
       navigation.navigate("NotificationScreen", { userId: storedUserId });
     } else {
-      console.log("Unexpected response", response);
     }
 
   } catch (error) {
@@ -209,7 +208,7 @@ const styles = StyleSheet.create({
   form: { flex: 1, paddingHorizontal: 20, paddingTop: 16 },
   label: { fontSize: 14, color: "#555", marginBottom: 4, fontWeight: "500" },
   input: {
-    backgroundColor: "#bb8a52",
+    backgroundColor: "#fff4db",
     borderRadius: 8,
     padding: 12,
     fontSize: 16,

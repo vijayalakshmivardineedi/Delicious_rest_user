@@ -1,6 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
-import { baseURL } from '../../axios/healpers';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+} from "react-native";
+import { baseURL } from "../../axios/healpers";
 
 const OffersScreen = () => {
   const [offers, setOffers] = useState([]);
@@ -30,14 +36,27 @@ const OffersScreen = () => {
       ) : (
         <FlatList
           data={offers}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item, index) =>
+            item._id?.toString() || index.toString()
+          }
           renderItem={({ item }) => (
             <View style={styles.card}>
-              <Text style={styles.code}>{item.code}</Text>
+              <Text style={styles.code}>Coupon Code: {item.couponId}</Text>
               <Text style={styles.description}>{item.description}</Text>
-              <Text style={styles.detail}>Min Order: ₹{item.minOrderAmount}</Text>
-              <Text style={styles.detail}>Discount: ₹{item.discountAmount}</Text>
-              <Text style={styles.detail}>Expires: {new Date(item.expiryDate).toLocaleDateString()}</Text>
+              <Text style={styles.detail}>
+                Min Order: ₹{item.minOrderAmount}
+              </Text>
+              <Text style={styles.detail}>
+                Discount: ₹{item.discountAmount}
+              </Text>
+              {item.nthOrder && (
+                <Text style={styles.detail}>
+                  Valid on: {item.nthOrder}th Order
+                </Text>
+              )}
+              <Text style={styles.detail}>
+                Expires: {new Date(item.expiryDate).toLocaleDateString()}
+              </Text>
             </View>
           )}
         />
@@ -47,17 +66,17 @@ const OffersScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: '#fff' },
-  header: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
+  header: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
   card: {
     padding: 16,
     borderRadius: 8,
-    backgroundColor: '#FFF4E0',
+    backgroundColor: "#FFF4E0",
     marginBottom: 10,
   },
-  code: { fontWeight: 'bold', fontSize: 18, color: "#6d9773", marginBottom: 4 },
-  detail: { fontSize: 14, color: "black" },
-  description: {fontWeight: "bold"},
+  code: { fontWeight: "bold", fontSize: 18, color: "#6d9773", marginBottom: 4 },
+  description: { fontWeight: "bold", marginBottom: 4 },
+  detail: { fontSize: 14, color: "black", marginBottom: 2 },
 });
 
 export default OffersScreen;

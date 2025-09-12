@@ -22,31 +22,33 @@ const CheckoutScreen = ({ route, navigation }) => {
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [userName, setUserName] = useState("");
   const [userPhone, setUserPhone] = useState("");
+  const [userId, setUserId] = useState("");
 
   useEffect(() => {
     const fetchUserDetails = async () => {
-      const name = await AsyncStorage.getItem("userName");
-      const phone = await AsyncStorage.getItem("userPhone");
+      const name = await AsyncStorage.getItem("name");
+      const phone = await AsyncStorage.getItem("phone");
+      const token = await AsyncStorage.getItem("token");
+      const userId = await AsyncStorage.getItem("userId");
       setUserName(name || "Guest");
       setUserPhone(phone || "N/A");
+      setUserId(userId || "N/A");
     };
     fetchUserDetails();
   }, []);
 
-  const deliveryFee = 30;
+  const deliveryFee = 20;
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.itemCost * item.quantity,
     0
   );
-  const tax = Math.round(subtotal * 0.05);
-  const discount = appliedCoupon?.discountAmount || 0;
+  const tax = Math.round(subtotal * 0.03);
+  const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
   const total = subtotal + deliveryFee + tax - discount;
   const location = selectedAddress || "Not Selected";
 
   const handlePlaceOrder = async () => {
     try {
-      const raw = await AsyncStorage.getItem("userId");
-      const userId = JSON.parse(raw);
       const token = await AsyncStorage.getItem("token");
 
       const payload = {
@@ -65,7 +67,7 @@ const CheckoutScreen = ({ route, navigation }) => {
         paymentMethod,
         status: "Ordered",
         cookingInstructions: cookingRequest,
-        coupon: appliedCoupon?._id || null,
+        ...(appliedCoupon && { coupon: appliedCoupon._id }), 
       };
 
       await axiosInstance.post("/order/create", payload, {
@@ -74,6 +76,7 @@ const CheckoutScreen = ({ route, navigation }) => {
         },
       });
 
+      await deleteCart();
       Alert.alert("Success", "Order placed successfully!");
       navigation.replace("OrderSuccess");
     } catch (error) {
@@ -82,10 +85,23 @@ const CheckoutScreen = ({ route, navigation }) => {
     }
   };
 
+  console.log(userId);
+  const deleteCart = async () => {
+    try {
+      const res = await axiosInstance.delete(`/cart/deleteCart/${userId}`);
+      console.log("Cart deleted successfully:", res.data);
+    } catch (error) {
+      console.error(
+        "Error deleting cart:",
+        error.response?.data || error.message
+      );
+    }
+  };
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: 60 }} // Add bottom padding
+      contentContainerStyle={{ paddingBottom: 60 }}
     >
       <Text style={styles.title}>🧾 Bill Summary</Text>
 
@@ -288,7 +304,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 10,
     alignItems: "center",
-    marginBottom: 20, // ✅ fixed: removed "px", added number
+    marginBottom: 20,
   },
   payText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });

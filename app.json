@@ -1,40 +1,35 @@
 {
   "expo": {
-    "name": "DeliciousRestUser",
-    "slug": "restaurant-app",
-    "version": "1.0.0",
+    "name": "Bhimavaram Delicious Biryanis",
+    "slug": "user",
+    "version": "2.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/delicious.png",
-    "userInterfaceStyle": "light",
+    "icon": "./src/assets/Picsart_25-04-21_20-04-54-231.png",
     "splash": {
-      "image": "./src/assets/delicious.png",
+      "image": "./src/assets/Logo.png",
       "resizeMode": "cover",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#603F26"
     },
     "android": {
-      "package": "com.yourcompany.delicioususer",
-      "versionCode": 1,
-      "splash": {
-        "image": "./src/assets/delicious.png",
-        "resizeMode": "cover",
-        "backgroundColor": "#ffffff"
-      }
+      "package": "com.yeswanth21.user",
+      "versionCode": 2,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
+      "newArchEnabled": false
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "plugins": [
-      [
-        "expo-notifications",
-        {
-          "icon": "./src/assets/notification-icon.png",
-          "color": "#ffffff"
-        }
-      ]
-    ],
+    "ios": {
+      "newArchEnabled": false
+    },
     "extra": {
       "eas": {
-        "projectId": "088fb20e-b32d-4d18-82e5-230ad30a9c5e"
+        "projectId": "111f4e70-af4d-4601-86d8-499dae9d83af"
       }
     }
   }

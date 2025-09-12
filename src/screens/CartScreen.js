@@ -29,11 +29,26 @@ const CartScreen = () => {
   const myCart = async () => {
     try {
       const raw = await AsyncStorage.getItem("userId");
-      const userId = parseInt(JSON.parse(raw), 10);
+      const userId = raw ? parseInt(JSON.parse(raw), 10) : null;
+      if (!userId || Number.isNaN(userId)) {
+        return;
+      }
       const response = await axiosInstance.get(`/cart/getCart/${userId}`);
-      setCartItems(response.data.items);
+
+      const cartData = response.data;
+
+      if (
+        !cartData ||
+        !Array.isArray(cartData.items) ||
+        cartData.items.length === 0
+      ) {
+        setCartItems([]); // Set empty
+        return;
+      }
+
+      setCartItems(cartData.items);
     } catch (error) {
-      console.error("Error fetching cart:", error);
+      setCartItems([]); // Ensure fallback to empty array
     }
   };
 
@@ -49,14 +64,9 @@ const CartScreen = () => {
       });
 
       if (response.status === 200) {
-        console.log("Location Data:", response.data.location); // ✅ log actual location object
-        setLocationData(response.data.location); // ✅ FIX: access `.location`
+        setLocationData(response.data.location);
       }
     } catch (error) {
-      console.log(
-        "Error fetching location:",
-        error?.response?.data || error.message
-      );
       Alert.alert("Error", "Failed to fetch address");
     }
   };
@@ -64,13 +74,77 @@ const CartScreen = () => {
   const fetchCoupons = async () => {
     try {
       const res = await axiosInstance.get("/coupon");
-      setAvailableCoupons(res.data || []);
+      const coupons = res.data || [];
+
+      // Filter out expired coupons
+      const now = new Date();
+      const validCoupons = coupons.filter((coupon) => {
+        const expiryDate = new Date(coupon.expiryDate);
+        return expiryDate > now;
+      });
+
+      setAvailableCoupons(validCoupons);
     } catch (error) {
       console.error(
         "Failed to fetch coupons:",
         error?.response?.data || error.message
       );
-      Alert.alert("Error", "Unable to fetch coupons");
+    }
+  };
+
+  const checkCouponAvailability = async (coupon) => {
+    try {
+      const totalAmount = getTotal();
+
+      // Step 1: Check minimum order amount
+      if (totalAmount < coupon.minOrderAmount) {
+        Alert.alert(
+          "Coupon Not Applicable",
+          `Minimum order amount for this coupon is ₹${coupon.minOrderAmount}`
+        );
+        return false;
+      }
+
+      // Step 2: Fetch userId from AsyncStorage
+      const raw = await AsyncStorage.getItem("userId");
+      const userId = raw ? parseInt(JSON.parse(raw), 10) : null;
+      if (!userId || Number.isNaN(userId)) {
+        return;
+      }
+
+      // Step 3: Make API call
+      const response = await axiosInstance.get(
+        `/coupon/checkCouponAvailability/${userId}/${coupon._id}`
+      );
+
+      // Step 4: Check backend response status
+      if (
+        response.status === 200 &&
+        response.data.message === "Coupon is available"
+      ) {
+        return true;
+      } else {
+        Alert.alert(
+          "Coupon Not Available",
+          response.data.message || "This coupon is not available for your order"
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error("Coupon check failed:", error);
+
+      // If backend sent a response with message
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.message
+      ) {
+        Alert.alert("Coupon Not Available", error.response.data.message);
+      } else {
+        Alert.alert("Error", "Failed to check coupon availability");
+      }
+
+      return false;
     }
   };
 
@@ -110,9 +184,9 @@ const CartScreen = () => {
   };
 
   const updateCartItem = async (item) => {
-    const raw = await AsyncStorage.getItem("userId");
-    const userId = JSON.parse(raw);
     try {
+      const raw = await AsyncStorage.getItem("userId");
+      const userId = JSON.parse(raw);
       await axiosInstance.put(`/cart/updateCart`, {
         userId,
         items: {
@@ -130,9 +204,9 @@ const CartScreen = () => {
   };
 
   const deleteCartItem = async (item) => {
-    const raw = await AsyncStorage.getItem("userId");
-    const userId = JSON.parse(raw);
     try {
+      const raw = await AsyncStorage.getItem("userId");
+      const userId = JSON.parse(raw);
       const updatedItems = cartItems
         .filter((i) => i.itemId !== item.itemId)
         .reduce((acc, curr) => {
@@ -153,8 +227,14 @@ const CartScreen = () => {
     }
   };
 
-  const getTotal = () =>
-    cartItems.reduce((total, item) => total + item.itemCost * item.quantity, 0);
+  const getTotal = () => {
+    const subtotal = cartItems.reduce(
+      (total, item) => total + item.itemCost * item.quantity,
+      0
+    );
+    const discount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+    return Math.max(0, subtotal - discount);
+  };
 
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
@@ -196,16 +276,35 @@ const CartScreen = () => {
     </View>
   );
 
+  const handleCouponApply = async (coupon) => {
+    const isAvailable = await checkCouponAvailability(coupon);
+    if (isAvailable) {
+      setAppliedCoupon(coupon);
+      setCouponModalVisible(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll}>
         <View style={styles.section}>
-          <FlatList
-            data={cartItems}
-            renderItem={renderCartItem}
-            keyExtractor={(item) => item._id}
-            scrollEnabled={false}
-          />
+          {cartItems.length > 0 ? (
+            <FlatList
+              data={cartItems}
+              renderItem={renderCartItem}
+              keyExtractor={(item) => item._id}
+              scrollEnabled={false}
+            />
+          ) : (
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, fontWeight: "600", color: "#999" }}>
+                Your cart is empty.
+              </Text>
+              <Text style={{ fontSize: 14, color: "#aaa", marginTop: 8 }}>
+                Please add items to your cart.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -218,23 +317,41 @@ const CartScreen = () => {
           />
         </View>
 
-        <TouchableOpacity
-          style={styles.section}
-          onPress={() => setLocationModalVisible(true)}
-        >
+        <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>
-            Delivery Location {selectedAddress ? `• ${selectedAddress}` : ""}
+            Delivery Location {selectedAddress ? ` • ${selectedAddress}` : ""}
           </Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => setLocationModalVisible(true)}>
+            <Text style={styles.blueText}>Get Your Location</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={styles.section}
-          onPress={() => setCouponModalVisible(true)}
-        >
+        <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>
-            Apply Coupon {appliedCoupon ? `• ${appliedCoupon.code}` : ""}
+            Apply Coupon {appliedCoupon ? ` • ${appliedCoupon.couponId}` : ""}
           </Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => setCouponModalVisible(true)}>
+            <Text style={styles.blueText}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {appliedCoupon && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Coupon Applied</Text>
+            <View style={styles.couponAppliedCard}>
+              <Text style={styles.couponCode}>{appliedCoupon.couponId}</Text>
+              <Text style={styles.couponDiscount}>
+                -₹{appliedCoupon.discountAmount}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setAppliedCoupon(null)}
+                style={styles.removeCouponBtn}
+              >
+                <Text style={styles.removeCouponText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Type</Text>
@@ -260,26 +377,30 @@ const CartScreen = () => {
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Available Coupons</Text>
             {availableCoupons.length > 0 ? (
-              availableCoupons.map((coupon) => (
-                <TouchableOpacity
-                  key={coupon._id}
-                  style={styles.couponCard}
-                  onPress={() => {
-                    setAppliedCoupon(coupon);
-                    setCouponModalVisible(false);
-                  }}
-                >
-                  <Text style={styles.couponCode}>{coupon.code}</Text>
-                  <Text style={styles.couponDesc}>{coupon.description}</Text>
-                  <Text style={styles.couponDesc}>
-                    ₹{coupon.discountAmount} off on orders above ₹
-                    {coupon.minOrderAmount}
-                  </Text>
-                  <Text style={styles.couponDesc}>
-                    Exp: {new Date(coupon.expiryDate).toLocaleDateString()}
-                  </Text>
-                </TouchableOpacity>
-              ))
+              <ScrollView>
+                {availableCoupons.map((coupon) => (
+                  <TouchableOpacity
+                    key={coupon._id}
+                    style={styles.couponCard}
+                    onPress={() => handleCouponApply(coupon)}
+                  >
+                    <Text style={styles.couponCode}>{coupon.couponId}</Text>
+                    <Text style={styles.couponDesc}>{coupon.description}</Text>
+                    <Text style={styles.couponDesc}>
+                      Discount: ₹{coupon.discountAmount} off on Min Order: ₹
+                      {coupon.minOrderAmount}
+                    </Text>
+                    {coupon.nthOrder && (
+                      <Text style={styles.couponDesc}>
+                        Applicable on {coupon.nthOrder}th Order
+                      </Text>
+                    )}
+                    <Text style={styles.couponDesc}>
+                      Expiry: {new Date(coupon.expiryDate).toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             ) : (
               <Text style={{ textAlign: "center", marginVertical: 10 }}>
                 No coupons available.
@@ -302,7 +423,6 @@ const CartScreen = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Select Delivery Address</Text>
-
             {locationData?.address?.length > 0 ? (
               <View style={styles.card}>
                 {locationData.address.map((addr, index) => (
@@ -333,7 +453,6 @@ const CartScreen = () => {
                 No saved addresses found.
               </Text>
             )}
-
             <TouchableOpacity
               onPress={() => setLocationModalVisible(false)}
               style={{ marginTop: 10 }}
@@ -345,18 +464,35 @@ const CartScreen = () => {
       </Modal>
 
       <View style={styles.footer}>
-        <Text style={styles.totalAmount}>₹{getTotal()}</Text>
+        <View style={styles.totalContainer}>
+          {appliedCoupon && (
+            <View style={styles.discountRow}>
+              <Text style={styles.discountLabel}>Discount:</Text>
+              <Text style={styles.discountAmount}>
+                -₹{appliedCoupon.discountAmount}
+              </Text>
+            </View>
+          )}
+          <Text style={styles.totalAmount}>₹{getTotal()}</Text>
+        </View>
         <TouchableOpacity
           style={styles.payButton}
-          onPress={() =>
+          onPress={() => {
+            if (!selectedAddress) {
+              Alert.alert(
+                "Delivery Location",
+                "Please select a delivery location."
+              );
+              return;
+            }
             navigation.navigate("CheckoutScreen", {
               cartItems,
               totalAmount: getTotal(),
               cookingRequest,
               selectedAddress,
               appliedCoupon,
-            })
-          }
+            });
+          }}
         >
           <Text style={styles.payText}>Pay ₹{getTotal()}</Text>
         </TouchableOpacity>
@@ -369,7 +505,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   scroll: { flex: 1 },
   section: { padding: 16, borderBottomWidth: 1, borderColor: "#f0f0f0" },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
+  sectionRow: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderColor: "#f0f0f0",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  blueText: {
+    color: "#ffba00",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
   subText: { color: "#666", fontSize: 14 },
   addressInput: {
     backgroundColor: "#FFEAC5",
@@ -410,13 +559,6 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   vegDot: { width: 8, height: 8, borderRadius: 4 },
-  cookingRequest: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderColor: "#f0f0f0",
-  },
-  note: { fontSize: 14, marginBottom: 8 },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -426,17 +568,27 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
     backgroundColor: "#fff",
   },
-  totalAmount: { fontSize: 18, fontWeight: "600" },
-  label: {
-    fontSize: 16,
+  totalContainer: {
+    flexDirection: "column",
+  },
+  discountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  discountLabel: {
+    fontSize: 14,
+    color: "#666",
+    marginRight: 5,
+  },
+  discountAmount: {
+    fontSize: 14,
+    color: "green",
     fontWeight: "600",
-    marginTop: 10,
   },
-  value: {
-    fontSize: 16,
-    color: "#444",
-    marginTop: 4,
-  },
+  totalAmount: { fontSize: 18, fontWeight: "600" },
+  label: { fontSize: 16, fontWeight: "600", marginTop: 10 },
+  value: { fontSize: 16, color: "#444", marginTop: 4 },
   payButton: {
     backgroundColor: "#ffba00",
     paddingVertical: 12,
@@ -454,12 +606,9 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    maxHeight: "80%",
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 16 },
   card: {
     backgroundColor: "#fff4db",
     padding: 16,
@@ -473,15 +622,39 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 12,
   },
+  couponAppliedCard: {
+    backgroundColor: "#f0fff0",
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
   couponCode: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#ffba00",
   },
+  couponDiscount: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "green",
+  },
   couponDesc: {
     fontSize: 14,
     color: "#555",
     marginTop: 4,
+  },
+  removeCouponBtn: {
+    padding: 6,
+    borderRadius: 4,
+    backgroundColor: "#ffeaea",
+  },
+  removeCouponText: {
+    color: "#ff4444",
+    fontSize: 12,
+    fontWeight: "600",
   },
   modalClose: {
     textAlign: "center",

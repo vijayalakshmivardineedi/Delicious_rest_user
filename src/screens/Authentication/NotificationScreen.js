@@ -7,7 +7,6 @@ const NotificationScreen = ({ navigation }) => {
   const requestNotificationPermission = async () => {
     // Skip permission logic if in Expo Go (DEV mode)
     if (__DEV__) {
-      console.log('Skipping notification permission in Expo Go');
       navigation.replace('AppTabs');
       return;
     }

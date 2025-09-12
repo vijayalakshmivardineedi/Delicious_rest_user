@@ -17,33 +17,49 @@ const SavedAddressScreen = () => {
   const navigation = useNavigation();
 
   useEffect(() => {
-    const fetchAddress = async () => {
-      try {
-        const raw = await AsyncStorage.getItem("userId");
-        const userIdString = JSON.parse(raw);
-        const userId = parseInt(userIdString, 10);
-        if (!userIdString) {
-          Alert.alert("Session Expired", "Please log in again.");
-          navigation.replace("Onboard");
-          return;
-        }
+  const fetchAddress = async () => {
+    try {
+      const raw = await AsyncStorage.getItem("userId");
 
-        const response = await axiosInstance.get(`/location/${userId}`);
-
-        if (response.status === 200) {
-          setLocationData(response.data.location);
-        }
-      } catch (error) {
-        console.log(`Error URL: /location/${userId}`);
-        console.error("Fetch error:", error.message);
-        Alert.alert("Error", "Failed to fetch address");
-      } finally {
-        setLoading(false);
+      if (!raw) {
+        Alert.alert("Session Expired", "Please log in again.");
+        navigation.replace("Onboard");
+        return;
       }
-    };
 
-    fetchAddress();
-  }, []);
+      let userIdString = null;
+      try {
+        userIdString = JSON.parse(raw);
+      } catch (e) {
+        console.warn("Invalid stored userId:", e);
+        Alert.alert("Session Expired", "Please log in again.");
+        navigation.replace("Onboard");
+        return;
+      }
+
+      const userId = parseInt(userIdString, 10);
+      if (!userId || Number.isNaN(userId)) {
+        Alert.alert("Session Expired", "Please log in again.");
+        navigation.replace("Onboard");
+        return;
+      }
+
+      const response = await axiosInstance.get(`/location/${userId}`);
+
+      if (response.status === 200) {
+        setLocationData(response.data.location);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error.message);
+      Alert.alert("Error", "Failed to fetch address");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAddress();
+}, []);
+
 
   if (loading) {
     return (

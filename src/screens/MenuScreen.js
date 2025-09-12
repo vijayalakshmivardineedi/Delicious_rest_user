@@ -27,8 +27,17 @@ const MenuScreen = () => {
   const fetchMenu = async () => {
     try {
       const res = await axiosInstance.get("/menu/getMenu");
-      setMenuData(res.data || []);
+      if (Array.isArray(res.data)) {
+        const updatedMenu = res.data.map((cat) => ({
+          ...cat,
+          image: cat.cateimage, // Using cateimage as the category image
+        }));
+        setMenuData(updatedMenu);
+      } else {
+        setMenuData([]);
+      }
     } catch (err) {
+      setMenuData([]);
       Alert.alert("Error", "No Menu Found");
     }
   };
@@ -66,7 +75,6 @@ const MenuScreen = () => {
           [route.params.selectedCategory]: true,
         }));
 
-        // Optional: reset param
         navigation.setParams({ selectedCategory: null });
       }
     }, [route.params?.selectedCategory])
@@ -194,29 +202,41 @@ const MenuScreen = () => {
   return (
     <View style={{ flex: 1 }}>
       <ScrollView style={styles.container}>
-        {menuData.map((section, sectionIndex) => (
-          <View key={section._id} style={styles.accordionSection}>
-            <TouchableOpacity
-              style={styles.accordionHeader}
-              onPress={() => toggleSection(section.name)}
-            >
-              <Text style={styles.accordionTitle}>{section.name}</Text>
-              <Text style={styles.accordionToggle}>
-                {activeSections[section.name] ? "▲" : "▼"}
-              </Text>
-            </TouchableOpacity>
+        {menuData.length === 0 ? (
+          <Text style={styles.noMenuText}>No menu available.</Text>
+        ) : (
+          menuData.map((section) => (
+            <View key={section._id} style={styles.accordionSection}>
+              <TouchableOpacity
+                style={styles.accordionHeader}
+                onPress={() => toggleSection(section.name)}
+              >
+                <View style={styles.categoryRow}>
+                  {section.image && (
+                    <Image
+                      source={{ uri: section.image }}
+                      style={styles.categoryImage}
+                    />
+                  )}
+                  <Text style={styles.accordionTitle}>{section.name}</Text>
+                </View>
+                <Text style={styles.accordionToggle}>
+                  {activeSections[section.name] ? "▲" : "▼"}
+                </Text>
+              </TouchableOpacity>
 
-            <Collapsible collapsed={!activeSections[section.name]}>
-              {section.items.map((item, itemIndex) =>
-                renderItem(
-                  item,
-                  section.isEnabled,
-                  `${section._id}-${item._id}`
-                )
-              )}
-            </Collapsible>
-          </View>
-        ))}
+              <Collapsible collapsed={!activeSections[section.name]}>
+                {(section.items || []).map((item) =>
+                  renderItem(
+                    item,
+                    section.isEnabled,
+                    `${section._id}-${item._id}`
+                  )
+                )}
+              </Collapsible>
+            </View>
+          ))
+        )}
       </ScrollView>
 
       {Object.keys(cartItems).length > 0 && (
@@ -240,12 +260,30 @@ const styles = StyleSheet.create({
   accordionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 10,
+    backgroundColor: "#FFF4E0",
+    borderRadius: 6,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  categoryImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    marginRight: 10,
   },
   accordionTitle: { fontSize: 18, fontWeight: "600" },
   accordionToggle: { fontSize: 14, fontWeight: "600" },
-
+  noMenuText: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "gray",
+    marginTop: 20,
+  },
   itemContainer: {
     flexDirection: "row",
     marginTop: 12,
