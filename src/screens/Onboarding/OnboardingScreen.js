@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     justifyContent: "flex-end",
+    paddingBottom: 60,
     padding: 20,
   },
   textContainer: {
@@ -254,6 +255,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffba00",
     padding: 14,
     borderRadius: 8,
+    marginBottom: 40,
     alignItems: "center",
   },
   loginButtonText: { color: "white", fontSize: 16, fontWeight: "700" },
