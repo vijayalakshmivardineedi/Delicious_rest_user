@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     left: "5%",
     width: "90%",
     height: 60,
-    backgroundColor: "#ffba00",
+    backgroundColor: "#D3671B",
     marginBottom: 60,
     borderRadius: 50,
     flexDirection: "row",
@@ -389,12 +389,12 @@ const styles = StyleSheet.create({
   cartText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#000",
+    color: "white",
   },
   viewCartText: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#000",
+    color: "white",
   },
   disabledItem: {
     opacity: 0.4,

@@ -10,12 +10,17 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  useColorScheme,
+  Dimensions,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import axiosInstance from "../axios/healpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import Swiper from "react-native-swiper";
+
+const { width } = Dimensions.get("window");
 
 const HomeScreen = ({ navigation }) => {
   const [isVeg, setIsVeg] = useState(false);
@@ -24,6 +29,10 @@ const HomeScreen = ({ navigation }) => {
   const [menu, setMenu] = useState([]);
   const [cartItems, setCartItems] = useState({});
   const [loading, setLoading] = useState(true);
+
+  const scheme = useColorScheme(); // Detect dark or light mode
+
+  const isDark = scheme === "dark";
 
   const fetchMenu = async () => {
     try {
@@ -155,66 +164,148 @@ const HomeScreen = ({ navigation }) => {
     }, [])
   );
 
+  const banners = [
+    require("../assets/BANNER2.png"),
+    require("../assets/BANNER1.png"),
+    require("../assets/BANNER2.png"),
+  ];
+
+  const themeColors = {
+    background: isDark ? "#121212" : "#FFFFFF",
+    card: isDark ? "#1E1E1E" : "#FCF5EE",
+    text: isDark ? "#FFFFFF" : "#000000",
+    accent: "#D3671B",
+    secondary: isDark ? "#cfb153" : "#cfb153",
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar backgroundColor="black" barStyle="dark-content" />
-      <ScrollView style={styles.container}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: themeColors.background }]}
+    >
+      <StatusBar
+        backgroundColor={isDark ? "#000" : "#fbcf67"}
+        barStyle={isDark ? "light-content" : "dark-content"}
+      />
+
+      <ScrollView
+        style={[styles.container, { backgroundColor: themeColors.background }]}
+        showsVerticalScrollIndicator={false}
+      >
         <LinearGradient
-          colors={["#FFDBB5", "#FFF4E0"]}
+          colors={
+            isDark
+              ? ["#2C2C2C", "#1E1E1E"]
+              : ["#fbcf67", "#FCF5EE"]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.topSection}
         >
+          {/* Swiper Banner */}
           <View style={styles.bannerContainer}>
-            <Image
-              source={require("../assets/BANNER1.png")}
-              style={styles.bannerImage}
-            />
+            <Swiper
+              autoplay
+              autoplayTimeout={3}
+              loop
+              dotStyle={styles.dot}
+              activeDotStyle={styles.activeDot}
+              paginationStyle={styles.pagination}
+            >
+              {banners.map((img, index) => (
+                <View key={index} style={styles.slide}>
+                  <Image source={img} style={styles.bannerImage} />
+                </View>
+              ))}
+            </Swiper>
           </View>
+
           <View style={styles.filterContainer}>
-            <Text style={styles.filterText}>Veg Only</Text>
-            <Switch value={isVeg} onValueChange={setIsVeg} />
+            <Text style={[styles.filterText, { color: themeColors.text }]}>
+              Veg Only
+            </Text>
+            <Switch
+              value={isVeg}
+              onValueChange={setIsVeg}
+              thumbColor={isVeg ? "#D3671B" : "#ccc"}
+              trackColor={{ true: "#fbcf67", false: "#ddd" }}
+            />
           </View>
         </LinearGradient>
 
+        {/* Category Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            Categories
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {categoriesList.map((category, index) => (
               <TouchableOpacity
                 key={index}
-                style={styles.categoryButton}
+                style={styles.categoryWrapper}
                 onPress={() =>
                   navigation.navigate("Menu", {
                     selectedCategory: category.name,
                   })
                 }
               >
-                <Image
-                  source={{ uri: category.image }}
-                  style={styles.categoryImage}
-                />
-                <Text style={styles.categoryText}>{category.name}</Text>
+                <View
+                  style={[
+                    styles.categoryCircle,
+                    { backgroundColor: themeColors.secondary },
+                  ]}
+                >
+                  <Image
+                    source={{ uri: category.image }}
+                    style={styles.categoryImageRound}
+                  />
+                </View>
+                <Text style={[styles.categoryLabel, { color: themeColors.text }]}>
+                  {category.name}
+                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
+        {/* Best Sellers Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Best Sellers</Text>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            Best Sellers
+          </Text>
           <View style={styles.itemsContainer}>
             {menu
               .filter((item) => (isVeg ? item.itemType === "Veg" : true))
               .map((item) => (
-                <View key={item._id} style={styles.itemCard}>
+                <View
+                  key={item._id}
+                  style={[
+                    styles.itemCard,
+                    { backgroundColor: themeColors.card },
+                  ]}
+                >
                   <Image
                     source={{ uri: item.image }}
                     style={styles.itemImage}
                   />
                   <View style={styles.itemDetails}>
-                    <Text style={styles.itemName}>{item.itemName}</Text>
-                    <Text style={styles.itemPrice}>₹{item.itemCost}</Text>
-                    <Text style={styles.itemType}>{item.itemType}</Text>
+                    <Text
+                      style={[styles.itemName, { color: themeColors.text }]}
+                    >
+                      {item.itemName}
+                    </Text>
+                    <Text
+                      style={[styles.itemPrice, { color: themeColors.text }]}
+                    >
+                      ₹{item.itemCost}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.itemType,
+                        { color: item.itemType === "Veg" ? "green" : "red" },
+                      ]}
+                    >
+                      {item.itemType}
+                    </Text>
                   </View>
 
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -226,13 +317,20 @@ const HomeScreen = ({ navigation }) => {
                         >
                           <Ionicons
                             name="remove-circle"
-                            size={30}
+                            size={28}
                             color={
-                              item.catEnabled && item.isEnabled ? "red" : "#ccc"
+                              item.catEnabled && item.isEnabled
+                                ? "red"
+                                : "#ccc"
                             }
                           />
                         </TouchableOpacity>
-                        <Text style={{ marginHorizontal: 8 }}>
+                        <Text
+                          style={{
+                            marginHorizontal: 8,
+                            color: themeColors.text,
+                          }}
+                        >
                           {item.quantity}
                         </Text>
                       </>
@@ -245,9 +343,11 @@ const HomeScreen = ({ navigation }) => {
                     >
                       <Ionicons
                         name="add-circle"
-                        size={30}
+                        size={28}
                         color={
-                          item.catEnabled && item.isEnabled ? "#ffba00" : "#ccc"
+                          item.catEnabled && item.isEnabled
+                            ? themeColors.accent
+                            : "#ccc"
                         }
                       />
                     </TouchableOpacity>
@@ -260,15 +360,13 @@ const HomeScreen = ({ navigation }) => {
 
       {Object.keys(cartItems).length > 0 && (
         <TouchableOpacity
-          style={styles.bottomBar}
+          style={[styles.bottomBar, { backgroundColor: themeColors.accent }]}
           onPress={() => navigation.navigate("Cart")}
         >
           <Text style={styles.bottomBarText}>
             {Object.keys(cartItems).length} items | ₹{getTotalPrice()}
           </Text>
-          <View style={styles.addToCartButton}>
-            <Text style={styles.addToCartText}>View Cart</Text>
-          </View>
+          <Text style={styles.addToCartText}>View Cart</Text>
         </TouchableOpacity>
       )}
     </SafeAreaView>
@@ -276,11 +374,36 @@ const HomeScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#FFA500" },
-  container: { flex: 1, backgroundColor: "#fff" },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
   topSection: { paddingBottom: 15, paddingTop: 15 },
-  bannerContainer: { alignItems: "center", marginBottom: 20 },
-  bannerImage: { width: "90%", height: 180, borderRadius: 8 },
+  bannerContainer: {
+    height: width * 0.45,
+    borderRadius: 12,
+    overflow: "hidden",
+    alignSelf: "center",
+  },
+  slide: { flex: 1, justifyContent: "center", alignItems: "center" },
+  bannerImage: {
+    width: width * 0.92,
+    height: width * 0.45,
+    borderRadius: 12,
+  },
+  pagination: { bottom: -20 },
+  dot: {
+    backgroundColor: "rgba(255,255,255,0.4)",
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 3,
+  },
+  activeDot: {
+    backgroundColor: "#D3671B",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginHorizontal: 3,
+  },
   filterContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -288,69 +411,55 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   filterText: { fontSize: 16, fontWeight: "bold", marginRight: 10 },
-  section: { margin: 20 },
+  section: { marginHorizontal: 20, marginVertical: 15 },
   sectionTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  categoryButton: {
-    backgroundColor: "#ffba00",
+  categoryWrapper: { alignItems: "center", marginRight: 15 },
+  categoryCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
     alignItems: "center",
-    marginRight: 15,
-    padding: 10,
-    borderRadius: 12,
-    width: 110,
+    justifyContent: "center",
+    elevation: 5,
   },
-  categoryImage: { width: 80, height: 80, borderRadius: 10 },
-  categoryText: {
-    fontSize: 14,
-    marginTop: 5,
-    fontWeight: "600",
-    textAlign: "center",
-  },
+  categoryImageRound: { width: 70, height: 70, borderRadius: 35 },
+  categoryLabel: { marginTop: 8, fontSize: 14, fontWeight: "600" },
   itemsContainer: { flexDirection: "column" },
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFEAC5",
     padding: 10,
     marginVertical: 5,
     borderRadius: 10,
-    elevation: 3,
+    elevation: 4,
+    shadowColor: "#000",
   },
   itemImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 5,
+    width: width * 0.25,
+    height: width * 0.25,
+    borderRadius: 10,
     marginRight: 10,
   },
   itemDetails: { flex: 1 },
   itemName: { fontSize: 16, fontWeight: "bold" },
-  itemPrice: { fontSize: 14, color: "#666" },
-  itemType: { fontSize: 12, color: "green" },
+  itemPrice: { fontSize: 14 },
+  itemType: { fontSize: 12 },
   bottomBar: {
-    backgroundColor: "#ffba00",
-    height: 60,
-    width: "90%",
-    position: "absolute",
-    bottom: 15,
-    alignSelf: "center",
-    borderRadius: 50,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    elevation: 5,
-    marginBottom: 60,
-  },
-  bottomBarText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  addToCartText: {
-    color: "black",
-    fontWeight: "bold",
-    fontSize: 16,
-    marginRight: 30,
-  },
+  height: 60,
+  width: "90%",
+  position: "absolute",
+  bottom: 75, // this already gives a small gap above the edge
+  alignSelf: "center",
+  borderRadius: 50,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: 20,
+  elevation: 8,
+  backgroundColor: "#D3671B",
+},
+  bottomBarText: { fontSize: 16, fontWeight: "bold", color: "#fff" },
+  addToCartText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
 });
 
 export default HomeScreen;

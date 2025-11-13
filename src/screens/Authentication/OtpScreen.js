@@ -8,11 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
-import { baseURL } from "../../axios/healpers";
-import axiosInstance from "../../axios/healpers";
+import axiosInstance, { baseURL } from "../../axios/healpers";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const OtpScreen = ({ route, navigation }) => {
@@ -22,6 +21,20 @@ const OtpScreen = ({ route, navigation }) => {
   const [timer, setTimer] = useState(30);
   const inputRefs = useRef([]);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+
+  // 👇 Detect system theme
+  const scheme = useColorScheme();
+  const isDarkMode = scheme === "dark";
+
+  // 👇 Theme colors
+  const theme = {
+    background: isDarkMode ? "#121212" : "#FFFFFF",
+    text: isDarkMode ? "#FFFFFF" : "#000000",
+    inputBg: isDarkMode ? "#1E1E1E" : "#FCF5EE",
+    placeholder: isDarkMode ? "#BBBBBB" : "#555555",
+    accent: "#D3671B",
+    cardBg: isDarkMode ? "#1C1C1C" : "#FFFFFF",
+  };
 
   const handleVerifyOtp = async () => {
     const enteredOtp = otp.join("");
@@ -34,7 +47,6 @@ const OtpScreen = ({ route, navigation }) => {
     const formData = { phone: phoneNumber, otp: enteredOtp };
     try {
       const response = await axiosInstance.post(`/login`, formData);
-
       const data = await response?.data;
 
       if (response.status === 200) {
@@ -84,43 +96,55 @@ const OtpScreen = ({ route, navigation }) => {
     setShowBottomSheet(false);
     navigation.replace("RegistrationScreen", { phoneNumber });
   };
+
   const handleResendOtp = () => {
     navigation.replace("Onboard");
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
       behavior={Platform.select({ ios: "padding", android: null })}
     >
-      <Text style={styles.heading}>Verify with OTP sent to</Text>
-      <Text style={styles.phone}>{phoneNumber}</Text>
+      <Text style={[styles.heading, { color: theme.text }]}>
+        Verify with OTP sent to
+      </Text>
+      <Text style={[styles.phone, { color: theme.text }]}>{phoneNumber}</Text>
 
       <View style={styles.otpContainer}>
         {otp.map((digit, index) => (
           <TextInput
             key={index}
-            style={[styles.otpInput, digit !== "" ? styles.otpFilled : null]}
+            style={[
+              styles.otpInput,
+              { backgroundColor: theme.inputBg, color: theme.text },
+              digit !== "" ? { borderColor: theme.accent, borderWidth: 1 } : null,
+            ]}
             value={digit}
             onChangeText={(value) => handleInputChange(value, index)}
             keyboardType="number-pad"
             maxLength={1}
+            placeholder="-"
+            placeholderTextColor={theme.placeholder}
             ref={(input) => (inputRefs.current[index] = input)}
           />
         ))}
       </View>
 
-      <Text style={styles.statusText}>
+      <Text style={[styles.statusText, { color: "green" }]}>
         OTP found • Retry in 0:{timer < 10 ? "0" + timer : timer}
       </Text>
 
-      <TouchableOpacity style={styles.continueBtn} onPress={handleVerifyOtp}>
+      <TouchableOpacity
+        style={[styles.continueBtn, { backgroundColor: theme.accent }]}
+        onPress={handleVerifyOtp}
+      >
         <Text style={styles.continueText}>Continue</Text>
       </TouchableOpacity>
 
-      <Text style={styles.resendText}>
+      <Text style={[styles.resendText, { color: theme.text }]}>
         Didn't receive it?{" "}
-        <Text onPress={handleResendOtp} style={styles.resendLink}>
+        <Text onPress={handleResendOtp} style={[styles.resendLink, { color: theme.accent }]}>
           Retry
         </Text>
       </Text>
@@ -131,17 +155,17 @@ const OtpScreen = ({ route, navigation }) => {
         onBackdropPress={() => setShowBottomSheet(false)}
         style={styles.modal}
       >
-        <View style={styles.sheetContent}>
-          <Text style={styles.sheetTitle}>OTP Verified ✅</Text>
-          <Text style={styles.sheetSubtitle}>
+        <View style={[styles.sheetContent, { backgroundColor: theme.cardBg }]}>
+          <Text style={[styles.sheetTitle, { color: theme.text }]}>OTP Verified ✅</Text>
+          <Text style={[styles.sheetSubtitle, { color: theme.text }]}>
             But we couldn't find your account.
           </Text>
-          <Text style={styles.sheetSubtitle}>
+          <Text style={[styles.sheetSubtitle, { color: theme.text }]}>
             Do you want to create a new one?
           </Text>
 
           <TouchableOpacity
-            style={styles.createBtn}
+            style={[styles.createBtn, { backgroundColor: theme.accent }]}
             onPress={handleCreateAccount}
           >
             <Text style={styles.createBtnText}>Create Account</Text>
@@ -155,21 +179,13 @@ const OtpScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
     paddingHorizontal: 24,
     justifyContent: "flex-start",
     paddingTop: 60,
   },
-  backButton: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    zIndex: 10,
-  },
   heading: {
     fontSize: 26,
     fontWeight: "600",
-    color: "#000",
     marginLeft: 12,
     marginBottom: 6,
     marginTop: 15,
@@ -177,7 +193,6 @@ const styles = StyleSheet.create({
   phone: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#000",
     marginBottom: 30,
     marginLeft: 12,
   },
@@ -191,23 +206,17 @@ const styles = StyleSheet.create({
     width: 50,
     height: 55,
     borderRadius: 10,
-    backgroundColor: "#FFEAC5",
     textAlign: "center",
     fontSize: 20,
     fontWeight: "bold",
   },
-  otpFilled: {
-    borderColor: "green",
-  },
   statusText: {
     marginLeft: 12,
-    color: "green",
     fontSize: 14,
     marginBottom: 20,
     fontWeight: "500",
   },
   continueBtn: {
-    backgroundColor: "#ffba00",
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
@@ -222,10 +231,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginLeft: 12,
     fontSize: 14,
-    color: "#666",
   },
   resendLink: {
-    color: "#ffba00",
     fontWeight: "bold",
   },
   modal: {
@@ -233,7 +240,6 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   sheetContent: {
-    backgroundColor: "#fff",
     padding: 24,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -247,11 +253,9 @@ const styles = StyleSheet.create({
   sheetSubtitle: {
     fontSize: 15,
     textAlign: "center",
-    color: "#666",
     marginBottom: 10,
   },
   createBtn: {
-    backgroundColor: "#fc8019",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,

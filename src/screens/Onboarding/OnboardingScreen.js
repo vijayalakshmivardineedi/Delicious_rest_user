@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  useColorScheme,
 } from "react-native";
 import SwiperFlatList from "react-native-swiper-flatlist";
 import Modal from "react-native-modal";
@@ -24,6 +25,20 @@ const { width, height } = Dimensions.get("window");
 const OnboardingScreen = ({ navigation }) => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+
+  // 👇 Detect system theme
+  const scheme = useColorScheme();
+  const isDarkMode = scheme === "dark";
+
+  // Theme colors
+  const theme = {
+    background: isDarkMode ? "#121212" : "#FFFFFF",
+    text: isDarkMode ? "#FFFFFF" : "#000000",
+    overlay: "rgba(0, 0, 0, 0.4)",
+    accent: "#D3671B",
+    inputBg: isDarkMode ? "#1E1E1E" : "#FCF5EE",
+    placeholder: isDarkMode ? "#BBBBBB" : "#555555",
+  };
 
   const slides = [
     {
@@ -81,14 +96,14 @@ const OnboardingScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <SwiperFlatList
         autoplay
         autoplayDelay={3}
         showPagination
         paginationStyle={styles.pagination}
         paginationStyleItem={styles.dotStyle}
-        paginationActiveColor="#ffba00"
+        paginationActiveColor={theme.accent}
         paginationDefaultColor="#ccc"
       >
         {slides.map((slide, index) => (
@@ -97,17 +112,23 @@ const OnboardingScreen = ({ navigation }) => {
               source={slide.image}
               style={styles.backgroundImage}
             >
-              <View style={styles.blackOverlay} />
+              <View
+                style={[StyleSheet.absoluteFill, { backgroundColor: theme.overlay }]}
+              />
 
               <View style={styles.contentContainer}>
                 <View style={styles.textContainer}>
-                  <Text style={styles.title}>{slide.title}</Text>
-                  <Text style={styles.description}>{slide.description}</Text>
+                  <Text style={[styles.title, { color: "#fff" }]}>
+                    {slide.title}
+                  </Text>
+                  <Text style={[styles.description, { color: "#fff" }]}>
+                    {slide.description}
+                  </Text>
                 </View>
 
                 {index === slides.length - 1 && (
                   <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.button, { backgroundColor: theme.accent }]}
                     onPress={handleGetStarted}
                   >
                     <Text style={styles.buttonText}>Get Started</Text>
@@ -133,34 +154,55 @@ const OnboardingScreen = ({ navigation }) => {
             contentContainerStyle={styles.modalScroll}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.modalContent}>
-              <Text style={styles.welcomeText}>
+            <View
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.background },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.welcomeText,
+                  { color: theme.text },
+                ]}
+              >
                 Welcome to Bhimavaram Delicious Biryani's
               </Text>
-              <Text style={styles.loginPrompt}>
+              <Text style={[styles.loginPrompt, { color: theme.accent }]}>
                 Login with your phone number
               </Text>
 
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.inputBg,
+                    color: theme.text,
+                  },
+                ]}
                 keyboardType="number-pad"
                 placeholder="Enter phone number"
+                placeholderTextColor={theme.placeholder}
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 maxLength={10}
               />
 
               <TouchableOpacity
-                style={styles.loginButton}
+                style={[styles.loginButton, { backgroundColor: theme.accent }]}
                 onPress={handleSendOTP}
               >
                 <Text style={styles.loginButtonText}>Continue</Text>
               </TouchableOpacity>
 
               <View style={styles.registerContainer}>
-                <Text style={styles.registerText}>Don't have an account? </Text>
+                <Text style={[styles.registerText, { color: theme.text }]}>
+                  Don't have an account?{" "}
+                </Text>
                 <TouchableOpacity onPress={handleCreateAccount}>
-                  <Text style={styles.registerLink}>Register</Text>
+                  <Text style={[styles.registerLink, { color: theme.accent }]}>
+                    Register
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -171,7 +213,6 @@ const OnboardingScreen = ({ navigation }) => {
   );
 };
 
-// Styles
 const styles = StyleSheet.create({
   container: { flex: 1 },
   slide: { width, height },
@@ -181,38 +222,25 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
-  blackOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-  },
-
-  /** Auto layout content */
   contentContainer: {
     flex: 1,
     justifyContent: "flex-end",
     paddingBottom: 60,
     padding: 20,
   },
-  textContainer: {
-    marginBottom: 20,
-  },
+  textContainer: { marginBottom: 20 },
   title: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#fff",
     marginBottom: 8,
-    flexWrap: "wrap",
   },
   description: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#fff",
     lineHeight: 22,
     marginBottom: 20,
-    flexWrap: "wrap",
   },
   button: {
-    backgroundColor: "#ffba00",
     paddingVertical: 14,
     borderRadius: 25,
     width: "100%",
@@ -221,12 +249,9 @@ const styles = StyleSheet.create({
   buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
   pagination: { position: "absolute", bottom: 10 },
   dotStyle: { marginHorizontal: 5, width: 8, height: 8, borderRadius: 4 },
-
-  /** Modal Styles */
   modal: { justifyContent: "flex-end", margin: 0 },
   modalScroll: { flexGrow: 1, justifyContent: "flex-end" },
   modalContent: {
-    backgroundColor: "#fff",
     padding: 25,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -240,7 +265,6 @@ const styles = StyleSheet.create({
   loginPrompt: {
     textAlign: "center",
     fontSize: 16,
-    color: "#666",
     marginBottom: 20,
   },
   input: {
@@ -248,11 +272,8 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: "#FFEAC5",
-    color: "black",
   },
   loginButton: {
-    backgroundColor: "#ffba00",
     padding: 14,
     borderRadius: 8,
     marginBottom: 40,
@@ -265,8 +286,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     flexWrap: "wrap",
   },
-  registerText: { fontSize: 14, color: "#555" },
-  registerLink: { fontSize: 14, color: "#ffba00", fontWeight: "bold" },
+  registerText: { fontSize: 14 },
+  registerLink: { fontSize: 14, fontWeight: "bold" },
 });
 
 export default OnboardingScreen;

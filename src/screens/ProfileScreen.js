@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   profileHeader: {
-    backgroundColor: "#FFEAC5",
+    backgroundColor: "#FCF5EE",
     paddingVertical: 40,
     borderRadius: 12,
     alignItems: "center",
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
-    backgroundColor: "#FFEAC5",
+    backgroundColor: "#FCF5EE",
     borderRadius: 8,
     marginVertical: 5,
     paddingHorizontal: 20,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   NavigationContainer,
   DefaultTheme,
@@ -9,8 +9,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "react-native";
 import { LightTheme, CustomDarkTheme } from "../../src/navigation/theme";
+import { LinearGradient } from "expo-linear-gradient";
 
-// your screens...
+// Screens
 import HomeScreen from "../screens/HomeScreens";
 import MenuScreen from "../screens/MenuScreen";
 import CartScreen from "../screens/CartScreen";
@@ -39,28 +40,24 @@ const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const AppNavigator = () => {
-  const scheme = useColorScheme(); // ✅ auto detects system dark/light
+  const scheme = useColorScheme();
 
   const TabNavigator = () => {
     return (
       <Tab.Navigator
         initialRouteName="Home"
         screenOptions={({ navigation }) => ({
-          tabBarActiveTintColor: "#ffba00",
-          tabBarInactiveTintColor: scheme === "dark" ? "#aaa" : "white",
+          tabBarActiveTintColor: "#FCF5EE",
+          tabBarInactiveTintColor: "#fbcf67",
           tabBarStyle: {
             height: 70,
             borderTopLeftRadius: 50,
             borderTopRightRadius: 50,
-            backgroundColor: scheme === "dark" ? "#1c1c1c" : "#0c3b2e",
+            backgroundColor: "#D3671B",
             position: "absolute",
             overflow: "hidden",
           },
-          headerStyle: {
-            backgroundColor: scheme === "dark" ? "#000" : "#fff",
-          },
           headerTitleStyle: {
-            color: scheme === "dark" ? "#fff" : "#000",
             fontWeight: "bold",
             fontSize: 20,
           },
@@ -75,20 +72,37 @@ const AppNavigator = () => {
           ),
         })}
       >
+        {/* Home Screen with gradient header */}
         <Tab.Screen
           name="Home"
           component={HomeScreen}
           options={{
-            title: "Home", 
+            title: "Home",
+            headerBackground: () => (
+              <LinearGradient
+                colors={["#fbcf67", "#FCF5EE"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            ),
+            headerTitleStyle: {
+              color: "#000",
+              fontWeight: "bold",
+              fontSize: 20,
+            },
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home" size={size} color={color} />
             ),
           }}
         />
+
+        {/* Other Tabs */}
         <Tab.Screen
           name="Menu"
           component={MenuScreen}
           options={{
+            title: "Menu",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="list" size={size} color={color} />
             ),
@@ -98,6 +112,7 @@ const AppNavigator = () => {
           name="Profile"
           component={ProfileScreen}
           options={{
+            title: "Profile",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person" size={size} color={color} />
             ),
